@@ -1,0 +1,46 @@
+{
+  "expo": {
+    "name": "School Uniform POS",
+    "slug": "school-uniform-pos",
+    "version": "0.1.0",
+    "orientation": "default",
+    "icon": "./assets/icon.png",
+    "scheme": "schooluniformpos",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "backgroundColor": "#0b1120"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.example.schooluniformpos",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Used to scan product barcodes."
+      }
+    },
+    "android": {
+      "package": "com.example.schooluniformpos",
+      "adaptiveIcon": {
+        "backgroundColor": "#0b1120"
+      },
+      "permissions": [
+        "CAMERA"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow the POS to scan uniform barcodes with the camera."
+        }
+      ],
+      "expo-secure-store",
+      "expo-sqlite"
+    ]
+  }
+}

@@ -1,0 +1,7 @@
+school_code,product_title,category,gender,uniform_type,size,sku,barcode,price
+GVPS,GVPS House Tshirt,Tshirt,unisex,house,S,GVPS-HTS-S,GVPS-HTS-S,180
+GVPS,GVPS House Tshirt,Tshirt,unisex,house,M,GVPS-HTS-M,GVPS-HTS-M,200
+GVPS,GVPS House Tshirt,Tshirt,unisex,house,L,GVPS-HTS-L,GVPS-HTS-L,220
+GVPS,GVPS Socks,Socks,unisex,regular,F,GVPS-SOX-F,GVPS-SOX-F,60
+ABCI,ABCI Belt,Belt,unisex,regular,F,ABCI-BLT-F,ABCI-BLT-F,100
+ABCI,ABCI Socks,Socks,unisex,regular,F,ABCI-SOX-F,ABCI-SOX-F,70

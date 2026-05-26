@@ -1,0 +1,31 @@
+node_modules/
+dist/
+build/
+out/
+.next/
+.medusa/
+.cache/
+coverage/
+
+# Env
+.env
+.env.*
+!.env.example
+
+# Local databases
+*.sqlite
+*.sqlite-journal
+*.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Electron
+release/

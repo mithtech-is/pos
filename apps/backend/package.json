@@ -1,0 +1,45 @@
+{
+  "name": "@pos/backend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Medusa.js v2 backend for the offline-first school uniform POS.",
+  "main": "index.js",
+  "scripts": {
+    "build": "medusa build",
+    "seed": "medusa exec ./src/scripts/seed.ts",
+    "start": "medusa start",
+    "dev": "medusa develop",
+    "migration:generate": "medusa db:generate",
+    "migration:run": "medusa db:migrate",
+    "test:unit": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@medusajs/admin-sdk": "^2.4.0",
+    "@medusajs/cli": "^2.15.2",
+    "@medusajs/draft-order": "^2.15.2",
+    "@medusajs/framework": "^2.4.0",
+    "@medusajs/medusa": "^2.4.0",
+    "@mikro-orm/core": "6.6.12",
+    "@mikro-orm/knex": "6.6.12",
+    "@mikro-orm/migrations": "6.6.12",
+    "@mikro-orm/postgresql": "6.6.12",
+    "@pos/shared": "*",
+    "@types/jsonwebtoken": "^9.0.10",
+    "ajv": "^8.20.0",
+    "awilix": "^8.0.1",
+    "jsonwebtoken": "^9.0.3",
+    "pg": "^8.11.5",
+    "ts-node": "^10.9.2"
+  },
+  "devDependencies": {
+    "@medusajs/test-utils": "^2.4.0",
+    "@types/node": "^20.12.7",
+    "@types/pg": "^8.11.6",
+    "typescript": "^5.4.5",
+    "vitest": "^1.5.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "name": "school-uniform-pos",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Offline-first POS system for a school-uniform distributor (Medusa.js v2 backend + Electron/React POS app).",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "backend:dev": "npm --workspace apps/backend run dev",
+    "backend:build": "npm --workspace apps/backend run build",
+    "backend:start": "npm --workspace apps/backend run start",
+    "pos:dev": "npm --workspace apps/pos-app run dev",
+    "pos:build": "npm --workspace apps/pos-app run build",
+    "pos:package": "npm --workspace apps/pos-app run package",
+    "shared:build": "npm --workspace packages/shared run build",
+    "typecheck": "npm --workspaces --if-present run typecheck"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "overrides": {
+    "ajv": "^8.17.1"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  }
+}
