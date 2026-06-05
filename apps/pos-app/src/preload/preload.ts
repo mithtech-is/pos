@@ -66,6 +66,12 @@ const api = {
     lines: Array<{ sku: string; qty: number; cost?: number }>;
   }) => ipcRenderer.invoke("pos:savePurchaseOrder", body),
   receivePurchaseOrder: (id: string) => ipcRenderer.invoke("pos:receivePurchaseOrder", id),
+  // Stores / outlets (multi-store)
+  listStores: () => ipcRenderer.invoke("pos:listStores"),
+  saveStore: (body: { name: string; code: string; city?: string }) =>
+    ipcRenderer.invoke("pos:saveStore", body),
+  setStoreActive: (payload: { id: string; active: boolean }) =>
+    ipcRenderer.invoke("pos:setStoreActive", payload),
   findKitByContext: (payload: {
     school_id: string;
     class_id: string;
@@ -80,6 +86,8 @@ const api = {
   listLocalOrders: (filter?: any) =>
     ipcRenderer.invoke("db:listLocalOrders", filter),
   getLocalOrder: (id: number) => ipcRenderer.invoke("db:getLocalOrder", id),
+  analytics: (filter?: { from?: string; to?: string }) =>
+    ipcRenderer.invoke("db:analytics", filter ?? {}),
   nextLocalOrderNumber: (payload: { device_code: string; now: string }) =>
     ipcRenderer.invoke("db:nextLocalOrderNumber", payload),
 

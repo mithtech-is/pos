@@ -83,6 +83,17 @@ export default async function seedCounterflowProducts({ container }: { container
     });
   }
 
+  // Second outlet so multi-store is demonstrable out of the box.
+  const [branch2] = await outletSvc.listSchools({ code: "BR2" });
+  if (!branch2) {
+    await outletSvc.createSchools({
+      name: "Branch 2",
+      code: "BR2",
+      city: "Local",
+      status: "active",
+    });
+  }
+
   const [existingGroup] = await outletSvc.listSchoolClasses({
     school_id: outlet.id,
     class_name: "Default",

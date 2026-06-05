@@ -23,6 +23,7 @@ export default function SettingsPage() {
   const [priceIncludesTax, setPriceIncludesTax] = useState(false);
   const [hsnCode, setHsnCode] = useState("");
   const [loyaltyRate, setLoyaltyRate] = useState("100");
+  const [marginPct, setMarginPct] = useState("40");
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
@@ -57,6 +58,7 @@ export default function SettingsPage() {
       setLoyaltyRate(
         String(((await window.pos.getSetting("loyalty_rupees_per_point")) as number) ?? 100),
       );
+      setMarginPct(String(((await window.pos.getSetting("assumed_margin_pct")) as number) ?? 40));
     })().catch(() => {});
   }, []);
 
@@ -82,6 +84,10 @@ export default function SettingsPage() {
     await window.pos.setSetting({
       key: "loyalty_rupees_per_point",
       value: Math.max(1, Number(loyaltyRate) || 100),
+    });
+    await window.pos.setSetting({
+      key: "assumed_margin_pct",
+      value: Math.max(0, Math.min(100, Number(marginPct) || 0)),
     });
     setSaved(true);
     setTimeout(() => setSaved(false), 1500);
@@ -231,6 +237,18 @@ export default function SettingsPage() {
             <div className="muted">
               e.g. 100 → 1 point per ₹100 spent. Points redeem at ₹1 each at checkout.
             </div>
+          </div>
+          <div>
+            <label>Assumed gross margin % (Analytics profit estimate)</label>
+            <input
+              type="number"
+              min={0}
+              max={100}
+              value={marginPct}
+              onChange={(e) => setMarginPct(e.target.value)}
+              placeholder="40"
+            />
+            <div className="muted">Used to estimate gross profit on the Analytics page.</div>
           </div>
         </div>
       </div>

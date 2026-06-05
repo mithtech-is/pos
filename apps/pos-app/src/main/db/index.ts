@@ -116,6 +116,9 @@ export function registerDatabaseHandlers(ipc: IpcMain) {
   ipc.handle("db:getLocalOrder", (_e, id: number) =>
     repositories.orders().getById(id),
   );
+  ipc.handle("db:analytics", (_e, filter: { from?: string; to?: string } | undefined) =>
+    repositories.orders().analytics(filter ?? {}),
+  );
   ipc.handle("db:markOrderSynced", (_e, payload: any) =>
     repositories.orders().markSynced(payload.id, payload.server_order_id),
   );

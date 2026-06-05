@@ -7,6 +7,8 @@ import AddProductPage from "./pages/AddProductPage";
 import CustomersPage from "./pages/CustomersPage";
 import PromotionsPage from "./pages/PromotionsPage";
 import InventoryPage from "./pages/InventoryPage";
+import StoresPage from "./pages/StoresPage";
+import AnalyticsPage from "./pages/AnalyticsPage";
 import OrdersPage from "./pages/OrdersPage";
 import PendingOrdersPage from "./pages/PendingOrdersPage";
 import SyncPage from "./pages/SyncPage";
@@ -48,9 +50,11 @@ export default function App() {
               <NavLink to="/add-product" className={navClass}>Add Product</NavLink>
               <NavLink to="/pos" className={navClass}>Checkout</NavLink>
               <NavLink to="/transactions" className={navClass}>Dashboard</NavLink>
+              <NavLink to="/analytics" className={navClass}>Analytics</NavLink>
               <NavLink to="/customers" className={navClass}>Customers</NavLink>
               <NavLink to="/promotions" className={navClass}>Promotions</NavLink>
               <NavLink to="/inventory" className={navClass}>Inventory</NavLink>
+              <NavLink to="/stores" className={navClass}>Stores</NavLink>
               <NavLink to="/orders" className={navClass}>Orders</NavLink>
               <NavLink to="/offline-trades" className={navClass}>Offline Orders</NavLink>
               <NavLink to="/returns" className={navClass}>Returns</NavLink>
@@ -71,9 +75,11 @@ export default function App() {
         <Route path="/add-product" element={<AddProductPage />} />
         <Route path="/pos" element={<POSPage />} />
         <Route path="/transactions" element={<TransactionsPage />} />
+        <Route path="/analytics" element={<AnalyticsPage />} />
         <Route path="/customers" element={<CustomersPage />} />
         <Route path="/promotions" element={<PromotionsPage />} />
         <Route path="/inventory" element={<InventoryPage />} />
+        <Route path="/stores" element={<StoresPage />} />
         <Route path="/orders" element={<OrdersPage />} />
         <Route path="/offline-trades" element={<OfflineTradesPage />} />
         <Route path="/returns" element={<ReturnsPage />} />

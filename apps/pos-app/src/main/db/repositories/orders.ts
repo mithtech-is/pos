@@ -140,6 +140,65 @@ export class OrdersRepository {
       .all({ ...params, limit: filter.limit ?? 50, offset: filter.offset ?? 0 });
   }
 
+  /**
+   * Sales analytics over a date range (local SQLite is the source of truth for
+   * the POS's own sales — every offline + online sale is recorded here).
+   * Returns lightweight order rows (the renderer aggregates KPIs / daily /
+   * payment mix) plus a pre-grouped top-products list.
+   */
+  analytics(filter: { from?: string; to?: string } = {}) {
+    const conds: string[] = [];
+    const itemConds: string[] = [];
+    const params: any = {};
+    if (filter.from) {
+      conds.push("created_at >= @from");
+      itemConds.push("o.created_at >= @from");
+      params.from = filter.from;
+    }
+    if (filter.to) {
+      conds.push("created_at <= @to");
+      itemConds.push("o.created_at <= @to");
+      params.to = filter.to;
+    }
+    const w = conds.length ? "WHERE " + conds.join(" AND ") : "";
+    const wi = itemConds.length ? "WHERE " + itemConds.join(" AND ") : "";
+
+    const orders = this.db
+      .prepare(
+        `SELECT created_at, subtotal, discount_total, tax_total, grand_total, payment_mode
+           FROM local_orders ${w} ORDER BY created_at ASC`,
+      )
+      .all(params);
+
+    const top_products = this.db
+      .prepare(
+        `SELECT i.sku AS sku, i.product_name AS product_name,
+                SUM(i.quantity) AS qty, SUM(i.line_total) AS revenue
+           FROM local_order_items i
+           JOIN local_orders o ON o.id = i.local_order_id
+           ${wi}
+          GROUP BY i.sku, i.product_name
+          ORDER BY revenue DESC
+          LIMIT 20`,
+      )
+      .all(params);
+
+    const by_store = this.db
+      .prepare(
+        `SELECT o.school_id AS store_id,
+                COALESCE(s.name, 'Unassigned') AS store_name,
+                COUNT(*) AS orders, SUM(o.grand_total) AS net
+           FROM local_orders o
+           LEFT JOIN local_schools s ON s.id = o.school_id
+           ${wi}
+          GROUP BY o.school_id
+          ORDER BY net DESC`,
+      )
+      .all(params);
+
+    return { orders, top_products, by_store };
+  }
+
   markSynced(id: number, serverOrderId: string) {
     return this.db
       .prepare(

@@ -412,6 +412,18 @@ export function registerSyncHandlers(ipc: IpcMain) {
     call(`/pos/purchase-orders/${encodeURIComponent(id)}/receive`, { method: "POST" }),
   );
 
+  // Stores / outlets (multi-store)
+  ipc.handle("pos:listStores", () => call("/pos/stores"));
+  ipc.handle("pos:saveStore", (_e, body: any) =>
+    call("/pos/stores", { method: "POST", body: JSON.stringify(body) }),
+  );
+  ipc.handle("pos:setStoreActive", (_e, payload: { id: string; active: boolean }) =>
+    call(`/pos/stores/${encodeURIComponent(payload.id)}`, {
+      method: "POST",
+      body: JSON.stringify({ active: payload.active }),
+    }),
+  );
+
   /**
    * Verify a manager PIN for a sensitive action. Tries the backend first; if
    * the device is offline we fall back to the locally-cached manager_pin_hashes
