@@ -33,8 +33,6 @@ function buildReceiptHtml(r: ReceiptData): string {
   ${r.gst_rate ? `<div class="small" style="text-align:center">TAX INVOICE${r.hsn_code ? ` &middot; HSN ${r.hsn_code}` : ""}</div>` : ""}
   <hr/>
   <div>Receipt: ${r.receipt_number}</div>
-  <div>Local Order No: ${r.local_order_number}</div>
-  ${r.server_order_number ? `<div>Server Order No: ${r.server_order_number}</div>` : ""}
   <div>Date: ${r.date_time}</div>
   <div>Cashier: ${r.cashier_name}</div>
   <div>Outlet: ${r.school_name}</div>
@@ -67,7 +65,6 @@ function buildReceiptHtml(r: ReceiptData): string {
   </table>
   <hr/>
   <div>Payment: ${r.payment_mode}${r.payment_reference ? ` (${r.payment_reference})` : ""}</div>
-  <div>Status: ${r.sync_status === "synced" ? "Synced" : "Offline Receipt — Sync Pending"}</div>
   ${r.return_policy ? `<div class="small">${r.return_policy}</div>` : ""}
 </body></html>`;
 }

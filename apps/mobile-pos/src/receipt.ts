@@ -32,8 +32,6 @@ export function buildReceiptHtml(r: ReceiptData): string {
   ${r.gstin ? `<div class="small center">GSTIN: ${escape(r.gstin)}</div>` : ""}
   <hr/>
   <div>Receipt: <b>${escape(r.receipt_number)}</b></div>
-  <div>Local Order No: ${escape(r.local_order_number)}</div>
-  ${r.server_order_number ? `<div>Server Order No: ${escape(r.server_order_number)}</div>` : ""}
   <div>Date: ${escape(r.date_time)}</div>
   <div>Cashier: ${escape(r.cashier_name)}</div>
   <div>Outlet: ${escape(r.school_name)}</div>
@@ -60,7 +58,6 @@ export function buildReceiptHtml(r: ReceiptData): string {
   </table>
   <hr/>
   <div>Payment: ${escape(r.payment_mode)}${r.payment_reference ? ` (${escape(r.payment_reference)})` : ""}</div>
-  <div>Status: ${r.sync_status === "synced" ? "Synced" : "Offline Receipt — Sync Pending"}</div>
   ${r.return_policy ? `<div class="small">${escape(r.return_policy)}</div>` : '<div class="small">Returns accepted within 7 days with this receipt.</div>'}
   <div class="center small" style="margin-top:8px">Thank you! 🙏</div>
 </body></html>`;
