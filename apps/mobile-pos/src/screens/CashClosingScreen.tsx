@@ -11,6 +11,7 @@ import {
   Title,
   inr,
   styles,
+  ScreenScroll,
 } from "../components/ui";
 import { sanitizeNumericInput, INPUT_LIMITS } from "@pos/shared";
 import { colors } from "../theme";
@@ -119,7 +120,7 @@ export default function CashClosingScreen() {
   }
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.scrollPad}>
+    <ScreenScroll>
       <Title style={{ marginBottom: 12 }}>🔐 Cash closing</Title>
 
       <Panel elev style={{ marginBottom: 12 }}>
@@ -193,6 +194,6 @@ export default function CashClosingScreen() {
           <Text style={{ color: colors.info, marginTop: 8 }}>{message}</Text>
         )}
       </Panel>
-    </ScrollView>
+    </ScreenScroll>
   );
 }

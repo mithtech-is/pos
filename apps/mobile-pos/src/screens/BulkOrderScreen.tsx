@@ -11,6 +11,7 @@ import {
   Title,
   inr,
   styles,
+  ScreenScroll,
 } from "../components/ui";
 import { colors } from "../theme";
 import { useAuthStore } from "../state/auth";
@@ -273,7 +274,7 @@ export default function BulkOrderScreen() {
   };
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.scrollPad}>
+    <ScreenScroll>
       <Title>📦 Bulk order</Title>
       <Muted style={{ marginTop: 6, marginBottom: 12 }}>
         Paste CSV with headers: customer_name, group, option, type,
@@ -403,6 +404,6 @@ export default function BulkOrderScreen() {
           <Text style={{ color: colors.info }}>{message}</Text>
         </Panel>
       )}
-    </ScrollView>
+    </ScreenScroll>
   );
 }

@@ -5,11 +5,14 @@ import {
   TextInput,
   TouchableOpacity,
   ActivityIndicator,
+  ScrollView,
+  ScrollViewProps,
   StyleSheet,
   ViewStyle,
   TextStyle,
   TextInputProps,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { colors, radius, spacing, font, elevation } from "../theme";
 
 /* ---------- Panel ---------- */
@@ -303,3 +306,19 @@ export const styles = StyleSheet.create({
     paddingBottom: 80,
   },
 });
+
+/* ---------- ScreenScroll ----------
+ * Standard scrollable screen body. Wraps the content in a top safe-area inset
+ * so the first row (title + action buttons) always clears the status bar /
+ * notch instead of being pinned under it (and therefore unclickable). Use this
+ * instead of a bare <ScrollView style={styles.screen}> for any full screen.
+ */
+export const ScreenScroll: React.FC<
+  { children: React.ReactNode; contentStyle?: ViewStyle } & ScrollViewProps
+> = ({ children, contentStyle, ...rest }) => (
+  <SafeAreaView edges={["top"]} style={styles.screen}>
+    <ScrollView contentContainerStyle={[styles.scrollPad, contentStyle]} {...rest}>
+      {children}
+    </ScrollView>
+  </SafeAreaView>
+);

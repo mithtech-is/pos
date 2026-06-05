@@ -12,6 +12,7 @@ import {
   Title,
   inr,
   styles,
+  ScreenScroll,
 } from "../components/ui";
 import { colors, radius } from "../theme";
 import { useAuthStore } from "../state/auth";
@@ -161,7 +162,7 @@ export default function ReturnsScreen() {
   }, 0);
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.scrollPad}>
+    <ScreenScroll>
       <Title style={{ marginBottom: 8 }}>↩️ Returns</Title>
       <Input
         placeholder="Local # or customer mobile"
@@ -295,6 +296,6 @@ export default function ReturnsScreen() {
         onApprove={() => commitReturn()}
         onCancel={() => setPinOpen(false)}
       />
-    </ScrollView>
+    </ScreenScroll>
   );
 }

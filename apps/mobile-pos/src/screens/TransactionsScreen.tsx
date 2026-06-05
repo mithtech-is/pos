@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { ScrollView, View, Text } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
-import { Badge, Panel, Row, Title, Muted, Stat, Button, inr, styles } from "../components/ui";
+import { Badge, Panel, Row, Title, Muted, Stat, Button, inr, styles, ScreenScroll } from "../components/ui";
 import { colors, paymentColor, radius } from "../theme";
 import { orders as ordersRepo, masterData } from "../db/repositories";
 
@@ -96,7 +96,7 @@ export default function TransactionsScreen() {
   }, [filtered]);
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.scrollPad}>
+    <ScreenScroll>
       <Row style={{ justifyContent: "space-between", marginBottom: 12 }}>
         <View>
           <Title>💹 Transactions</Title>
@@ -240,6 +240,6 @@ export default function TransactionsScreen() {
           requires a payment gateway (Razorpay / Cashfree / Paytm).
         </Muted>
       </Panel>
-    </ScrollView>
+    </ScreenScroll>
   );
 }

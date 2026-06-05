@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { ScrollView, View } from "react-native";
-import { Badge, Button, Muted, Panel, Row, Stat, Title, styles } from "../components/ui";
+import { Badge, Button, Muted, Panel, Row, Stat, Title, styles, ScreenScroll } from "../components/ui";
 import { syncQueue } from "../db/repositories";
 import { getSyncState, onSyncState, pauseSyncWorker, tick } from "../sync";
 
@@ -26,7 +26,7 @@ export default function SyncScreen() {
   }, []);
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.scrollPad}>
+    <ScreenScroll>
       <Title style={{ marginBottom: 12 }}>📡 Sync</Title>
 
       <Panel elev style={{ marginBottom: 12 }}>
@@ -68,6 +68,6 @@ export default function SyncScreen() {
         <View style={{ height: 8 }} />
         <Stat label="Conflicts" value={stats.conflict} tone="danger" />
       </Panel>
-    </ScrollView>
+    </ScreenScroll>
   );
 }

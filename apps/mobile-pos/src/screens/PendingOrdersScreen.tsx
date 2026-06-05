@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from "react";
 import { ScrollView, View, Text } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
-import { Badge, Button, Muted, Panel, Row, Title, inr, styles } from "../components/ui";
+import { Badge, Button, Muted, Panel, Row, Title, inr, ScreenScroll } from "../components/ui";
 import { colors } from "../theme";
 import { orders as ordersRepo } from "../db/repositories";
 import { tick } from "../sync";
@@ -23,7 +23,7 @@ export default function PendingOrdersScreen() {
   );
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.scrollPad}>
+    <ScreenScroll>
       <Row style={{ justifyContent: "space-between" }}>
         <Title>⏳ Pending</Title>
         <Button
@@ -67,6 +67,6 @@ export default function PendingOrdersScreen() {
           </Panel>
         ))
       )}
-    </ScrollView>
+    </ScreenScroll>
   );
 }

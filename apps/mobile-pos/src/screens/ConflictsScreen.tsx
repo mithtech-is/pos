@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from "react";
 import { ScrollView, Text, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
-import { Badge, Muted, Panel, Row, Title, styles } from "../components/ui";
+import { Badge, Muted, Panel, Row, Title, styles, ScreenScroll } from "../components/ui";
 import { colors } from "../theme";
 import { settings, syncQueue } from "../db/repositories";
 
@@ -30,7 +30,7 @@ export default function ConflictsScreen() {
   );
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.scrollPad}>
+    <ScreenScroll>
       <Title>⚠️ Conflicts</Title>
       <Muted style={{ marginVertical: 6 }}>Backend: {backendUrl || "not configured"}</Muted>
 
@@ -65,6 +65,6 @@ export default function ConflictsScreen() {
         )}
         <Muted style={{ marginTop: 8 }}>Resolution happens in the admin dashboard.</Muted>
       </Panel>
-    </ScrollView>
+    </ScreenScroll>
   );
 }

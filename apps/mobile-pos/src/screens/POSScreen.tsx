@@ -19,6 +19,7 @@ import {
   inr,
   inr2,
   styles,
+  ScreenScroll,
 } from "../components/ui";
 import { colors, radius } from "../theme";
 import { useAuthStore } from "../state/auth";
@@ -528,7 +529,7 @@ export default function POSScreen() {
   }
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.scrollPad}>
+    <ScreenScroll>
       {/* CONTEXT PICKERS */}
       <Panel elev>
         <Title style={{ fontSize: 18 }}>Context</Title>
@@ -993,7 +994,7 @@ export default function POSScreen() {
           </Text>
         </View>
       )}
-    </ScrollView>
+    </ScreenScroll>
   );
 }
 
