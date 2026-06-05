@@ -1,6 +1,6 @@
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework";
 import { MODULE_KEYS } from "../../../../modules";
-import { syncOfflineOrderEvent } from "../../../../workflows";
+import { syncOfflineOrderEvent, createReturn, recordCashClosing } from "../../../../workflows";
 import { ok, badRequest, serverError } from "../../../_utils/response";
 
 /**
@@ -107,6 +107,31 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
           } else {
             conflictCount++;
           }
+        } else if (evt.event_type === "return.created") {
+          const { return_id } = await createReturn((req as any).scope, {
+            ...(evt.payload as any),
+            idempotency_key: evt.idempotency_key,
+          });
+          await sync.markEventSynced(event.id, return_id);
+          results.push({
+            idempotency_key: evt.idempotency_key,
+            status: "synced",
+            server_order_id: return_id,
+          });
+          successCount++;
+        } else if (evt.event_type === "cash.closed") {
+          await recordCashClosing((req as any).scope, {
+            ...(evt.payload as any),
+            idempotency_key: evt.idempotency_key,
+          });
+          const ref = `cashclose_${evt.idempotency_key}`;
+          await sync.markEventSynced(event.id, ref);
+          results.push({
+            idempotency_key: evt.idempotency_key,
+            status: "synced",
+            server_order_id: ref,
+          });
+          successCount++;
         } else {
           await sync.markEventFailed(
             event.id,
