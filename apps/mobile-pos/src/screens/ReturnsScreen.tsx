@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import uuidv4 from "react-native-uuid";
-import { buildIdempotencyKey } from "@pos/shared";
+import { buildIdempotencyKey, clampInt } from "@pos/shared";
 import {
   Badge,
   Button,
@@ -214,9 +214,10 @@ export default function ReturnsScreen() {
                       label="Return qty"
                       value={String(sel?.qty ?? 0)}
                       onChangeText={(t) =>
-                        updateLine(it.id, Number(t) || 0, sel?.reason ?? "size_issue")
+                        updateLine(it.id, clampInt(t, 0, it.quantity), sel?.reason ?? "size_issue")
                       }
                       keyboardType="number-pad"
+                      maxLength={4}
                     />
                   </View>
                   <View style={{ flex: 1 }}>

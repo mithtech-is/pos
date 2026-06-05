@@ -4,10 +4,10 @@ import { CameraView, useCameraPermissions } from "expo-camera";
 import * as Haptics from "expo-haptics";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Button, Text, inr, useTheme } from "../design";
+import { Button, Text, useTheme } from "../design";
 import { useCartStore } from "../state/cart";
 import { masterData } from "../db/repositories";
-import ManualEntryModal from "../components/ManualEntryModal";
+import BarcodeLookupModal from "../components/BarcodeLookupModal";
 
 /**
  * Scan tab — full-screen camera with reticle + torch + haptics, matching the
@@ -24,11 +24,12 @@ import ManualEntryModal from "../components/ManualEntryModal";
  *   ║              ┗━━━━━━━━━━━━━━┛                    ║
  *   ║          Point at a barcode                       ║
  *   ║                                                  ║
- *   ║    [ Type code manually ]                         ║
+ *   ║    [ Enter barcode ]                              ║
  *   ╚══════════════════════════════════════════════════╝
  *
  * Successful scan → haptics, look up via masterData, drop into cart, navigate
- * to Cart tab. Miss → red error pill, haptics, manual-entry fallback option.
+ * to Cart tab. Miss → red error pill + haptics (use Search). The "Enter barcode"
+ * fallback only does a catalog lookup — it cannot add a free-form item.
  */
 export default function ScanScreen() {
   const t = useTheme();
@@ -38,7 +39,9 @@ export default function ScanScreen() {
   const [torch, setTorch] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [manualOpen, setManualOpen] = useState<{ barcode: string } | null>(null);
+  const [lookupOpen, setLookupOpen] = useState(false);
+  const [lookupBusy, setLookupBusy] = useState(false);
+  const [lookupError, setLookupError] = useState<string | null>(null);
   const [armed, setArmed] = useState(true);
   const lastSeen = useRef<{ data: string; at: number } | null>(null);
 
@@ -73,8 +76,7 @@ export default function ScanScreen() {
       const variant: any = await masterData.findByBarcode(data);
       if (!variant) {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        setError(`No product for "${data}"`);
-        setManualOpen({ barcode: data });
+        setError(`No product for "${data}" — use Search to find it`);
         return;
       }
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -100,20 +102,34 @@ export default function ScanScreen() {
     }
   }
 
-  function commitManualEntry(entry: { barcode: string; name: string; size: string; price: number }) {
-    const id = `manual-${Date.now()}`;
-    cart.addLine({
-      variant_id: id,
-      sku: entry.barcode || `MANUAL-${id.slice(-6)}`,
-      product_name: entry.name,
-      size: entry.size,
-      quantity: 1,
-      unit_price: entry.price,
-      discount: 0,
-      tax_rate: 0,
-    });
-    setManualOpen(null);
-    nav.getParent()?.navigate("Cart");
+  // Barcode-only fallback: look the typed code up in the catalog exactly like a
+  // scan. It can only add an existing product — never a free-form name/price.
+  async function submitLookup(code: string) {
+    setLookupBusy(true);
+    setLookupError(null);
+    try {
+      const variant: any = await masterData.findByBarcode(code);
+      if (!variant) {
+        setLookupError(`"${code}" isn't in the catalog. Use Search to find it.`);
+        return;
+      }
+      cart.addLine({
+        variant_id: variant.id,
+        sku: variant.sku,
+        product_name: variant.product_name ?? "Item",
+        size: variant.size ?? "",
+        quantity: 1,
+        unit_price: variant.price ?? 0,
+        discount: 0,
+        tax_rate: variant.tax_rate ?? 0,
+      });
+      setLookupOpen(false);
+      nav.getParent()?.navigate("Cart");
+    } catch (err) {
+      setLookupError((err as Error).message);
+    } finally {
+      setLookupBusy(false);
+    }
   }
 
   /* ── permission states ── */
@@ -302,7 +318,10 @@ export default function ScanScreen() {
         >
           <View style={{ padding: 20 }}>
             <TouchableOpacity
-              onPress={() => setManualOpen({ barcode: "" })}
+              onPress={() => {
+                setLookupError(null);
+                setLookupOpen(true);
+              }}
               style={{
                 backgroundColor: "rgba(255,255,255,0.95)",
                 borderRadius: 999,
@@ -311,18 +330,19 @@ export default function ScanScreen() {
               }}
             >
               <RNText style={{ color: "#282828", fontWeight: "600", fontSize: 14 }}>
-                ✏️  Type code manually
+                ⌨️  Enter barcode
               </RNText>
             </TouchableOpacity>
           </View>
         </SafeAreaView>
       </CameraView>
 
-      <ManualEntryModal
-        visible={!!manualOpen}
-        initialBarcode={manualOpen?.barcode}
-        onCancel={() => setManualOpen(null)}
-        onCommit={commitManualEntry}
+      <BarcodeLookupModal
+        visible={lookupOpen}
+        busy={lookupBusy}
+        error={lookupError}
+        onCancel={() => setLookupOpen(false)}
+        onSubmit={submitLookup}
       />
     </View>
   );

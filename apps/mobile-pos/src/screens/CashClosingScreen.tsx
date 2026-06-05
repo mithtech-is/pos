@@ -12,6 +12,7 @@ import {
   inr,
   styles,
 } from "../components/ui";
+import { sanitizeNumericInput, INPUT_LIMITS } from "@pos/shared";
 import { colors } from "../theme";
 import { useAuthStore } from "../state/auth";
 import { audit, orders as ordersRepo, settings, syncQueue } from "../db/repositories";
@@ -142,7 +143,7 @@ export default function CashClosingScreen() {
         <Input
           label="Opening float"
           value={openingFloat}
-          onChangeText={setOpeningFloat}
+          onChangeText={(t) => setOpeningFloat(sanitizeNumericInput(t, { max: INPUT_LIMITS.MONEY_MAX, decimals: true }))}
           keyboardType="number-pad"
         />
         <View style={{ height: 8 }} />
@@ -172,7 +173,7 @@ export default function CashClosingScreen() {
         <Input
           label="Counted cash"
           value={countedCash}
-          onChangeText={setCountedCash}
+          onChangeText={(t) => setCountedCash(sanitizeNumericInput(t, { max: INPUT_LIMITS.MONEY_MAX, decimals: true }))}
           keyboardType="number-pad"
         />
         <View style={{ height: 8 }} />

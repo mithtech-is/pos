@@ -6,6 +6,14 @@ import {
   computeGstBreakup,
   computePromoDiscount,
   isPromoActiveAt,
+  clampNumber,
+  clampInt,
+  sanitizeNumericInput,
+  digitsOnly,
+  INPUT_LIMITS,
+  filterBranchesForUser,
+  canUseBranch,
+  userHasBranchRestriction,
 } from "@pos/shared";
 import { useCartStore, type CartLine } from "../state/cart";
 
@@ -32,6 +40,81 @@ describe("shared/offline-order helpers", () => {
   it("buildLocalOrderNumber pads single-digit month/day", () => {
     const d = new Date(2026, 0, 9, 0, 0, 0); // 2026-01-09
     expect(buildLocalOrderNumber("CF1", d, 1)).toBe("CF1-20260109-0001");
+  });
+});
+
+describe("numeric input validation", () => {
+  it("clampNumber rejects negatives (floors to min)", () => {
+    expect(clampNumber(-5, 0, 100)).toBe(0);
+    expect(clampNumber("-999", 0, 100)).toBe(0);
+  });
+
+  it("clampNumber caps runaway/infinite values at max", () => {
+    expect(clampNumber(1e15, 0, INPUT_LIMITS.PRICE_MAX)).toBe(INPUT_LIMITS.PRICE_MAX);
+    expect(clampNumber(Infinity, 0, 100)).toBe(0); // non-finite -> min
+    expect(clampNumber("abc", 0, 100)).toBe(0); // non-numeric -> min
+  });
+
+  it("clampNumber passes through in-range values", () => {
+    expect(clampNumber("42.5", 0, 100)).toBe(42.5);
+  });
+
+  it("clampInt floors to a whole number within bounds", () => {
+    expect(clampInt("3.9", 1, 9999)).toBe(3);
+    expect(clampInt(0, 1, 9999)).toBe(1); // below min -> min
+    expect(clampInt(123456, 1, 9999)).toBe(9999); // above max -> max
+  });
+
+  it("sanitizeNumericInput strips the minus sign entirely", () => {
+    expect(sanitizeNumericInput("-50", { max: 100 })).toBe("50");
+    expect(sanitizeNumericInput("12-34", { max: 9999 })).toBe("1234");
+  });
+
+  it("sanitizeNumericInput clamps to max and keeps empty empty", () => {
+    expect(sanitizeNumericInput("99999", { max: 100 })).toBe("100");
+    expect(sanitizeNumericInput("", { max: 100 })).toBe("");
+  });
+
+  it("sanitizeNumericInput preserves a trailing dot mid-type for decimals", () => {
+    expect(sanitizeNumericInput("12.", { max: 100, decimals: true })).toBe("12.");
+    expect(sanitizeNumericInput("1.2.3", { max: 100, decimals: true })).toBe("1.23");
+    // decimals:false strips the dot, so "12.5" -> "125" (cap high enough not to clamp)
+    expect(sanitizeNumericInput("12.5", { max: 9999, decimals: false })).toBe("125");
+  });
+
+  it("digitsOnly keeps digits and caps length (phone/PIN)", () => {
+    expect(digitsOnly("98a76-543 21099", INPUT_LIMITS.MOBILE_DIGITS)).toBe("9876543210");
+    expect(digitsOnly("9999", INPUT_LIMITS.PIN_DIGITS)).toBe("9999");
+  });
+});
+
+describe("branch access control", () => {
+  const branches = [{ id: "a" }, { id: "b" }, { id: "c" }];
+
+  it("managers/admins see every branch regardless of assignment", () => {
+    expect(filterBranchesForUser(branches, { role: "manager", branch_ids: ["a"] })).toHaveLength(3);
+    expect(filterBranchesForUser(branches, { role: "admin", branch_ids: [] })).toHaveLength(3);
+    expect(userHasBranchRestriction({ role: "manager", branch_ids: ["a"] })).toBe(false);
+  });
+
+  it("an assigned cashier is scoped to exactly their branches", () => {
+    const visible = filterBranchesForUser(branches, { role: "cashier", branch_ids: ["a", "c"] });
+    expect(visible.map((b) => b.id)).toEqual(["a", "c"]);
+    expect(userHasBranchRestriction({ role: "cashier", branch_ids: ["a"] })).toBe(true);
+  });
+
+  it("a cashier with no assignment is unrestricted (sees all)", () => {
+    expect(filterBranchesForUser(branches, { role: "cashier", branch_ids: [] })).toHaveLength(3);
+    expect(filterBranchesForUser(branches, { role: "cashier" })).toHaveLength(3);
+    expect(userHasBranchRestriction({ role: "cashier", branch_ids: [] })).toBe(false);
+  });
+
+  it("canUseBranch enforces the same rule", () => {
+    expect(canUseBranch({ role: "manager", branch_ids: ["a"] }, "z")).toBe(true); // manager: any
+    expect(canUseBranch({ role: "cashier", branch_ids: ["a", "b"] }, "a")).toBe(true);
+    expect(canUseBranch({ role: "cashier", branch_ids: ["a", "b"] }, "c")).toBe(false);
+    expect(canUseBranch({ role: "cashier", branch_ids: [] }, "anything")).toBe(true); // unassigned
+    expect(canUseBranch({ role: "cashier", branch_ids: ["a"] }, null)).toBe(false); // restricted + no branch
   });
 });
 

@@ -1,5 +1,10 @@
 import { useEffect, useState } from "react";
-import type { PosPromotion, PosPromotionType } from "@pos/shared";
+import {
+  sanitizeNumericInput,
+  INPUT_LIMITS,
+  type PosPromotion,
+  type PosPromotionType,
+} from "@pos/shared";
 
 /**
  * Promotions management. Coupons live on the backend (store metadata) and are
@@ -100,12 +105,36 @@ export default function PromotionsPage() {
           {type !== "bogo" && (
             <div>
               <label>{type === "percent" ? "Percent" : "Amount (₹)"}</label>
-              <input value={value} onChange={(e) => setValue(e.target.value)} type="number" min={0} style={{ width: 100 }} />
+              <input
+                value={value}
+                onChange={(e) =>
+                  setValue(
+                    sanitizeNumericInput(e.target.value, {
+                      max: type === "percent" ? INPUT_LIMITS.PERCENT_MAX : INPUT_LIMITS.PRICE_MAX,
+                      decimals: type !== "percent",
+                    }),
+                  )
+                }
+                type="number"
+                min={0}
+                max={type === "percent" ? INPUT_LIMITS.PERCENT_MAX : INPUT_LIMITS.PRICE_MAX}
+                style={{ width: 100 }}
+              />
             </div>
           )}
           <div>
             <label>Min subtotal (₹)</label>
-            <input value={minSubtotal} onChange={(e) => setMinSubtotal(e.target.value)} type="number" min={0} placeholder="optional" style={{ width: 120 }} />
+            <input
+              value={minSubtotal}
+              onChange={(e) =>
+                setMinSubtotal(sanitizeNumericInput(e.target.value, { max: INPUT_LIMITS.PRICE_MAX, decimals: true }))
+              }
+              type="number"
+              min={0}
+              max={INPUT_LIMITS.PRICE_MAX}
+              placeholder="optional"
+              style={{ width: 120 }}
+            />
           </div>
           <div>
             <label>Starts</label>

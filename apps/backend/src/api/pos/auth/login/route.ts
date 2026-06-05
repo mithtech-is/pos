@@ -54,6 +54,9 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     }
 
     const role = (user.metadata as any)?.role ?? "cashier";
+    const branchIds: string[] = Array.isArray((user.metadata as any)?.branch_ids)
+      ? (user.metadata as any).branch_ids
+      : [];
     const offlinePinHash = (user.metadata as any)?.offline_pin_hash;
     const offlineDays = Number(process.env.POS_OFFLINE_SESSION_DAYS ?? 7);
 
@@ -80,6 +83,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
           user.email,
         email: user.email,
         role,
+        branch_ids: branchIds,
         status: "active",
         offline_access_expires_at: new Date(
           Date.now() + offlineDays * 24 * 60 * 60 * 1000,

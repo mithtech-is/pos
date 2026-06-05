@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { clampInt } from "@pos/shared";
 import { useCartStore } from "../state/cart";
 
 /** Catalog page backed by the local offline product cache. */
@@ -341,7 +342,7 @@ function ProductDetailModal({
                   min={1}
                   max={99}
                   value={qty}
-                  onChange={(e) => setQty(Math.max(1, Number(e.target.value) || 1))}
+                  onChange={(e) => setQty(clampInt(e.target.value, 1, 99))}
                   style={{ width: 80, textAlign: "center" }}
                 />
                 <button

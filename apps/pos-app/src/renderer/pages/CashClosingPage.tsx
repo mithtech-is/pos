@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
+import { clampNumber, INPUT_LIMITS } from "@pos/shared";
 import { useAuthStore } from "../state/auth";
 
 /**
@@ -156,9 +157,10 @@ export default function CashClosingPage() {
             <input
               type="number"
               min={0}
+              max={INPUT_LIMITS.MONEY_MAX}
               step={50}
               value={openingFloat || ""}
-              onChange={(e) => setOpeningFloat(Math.max(0, Number(e.target.value) || 0))}
+              onChange={(e) => setOpeningFloat(clampNumber(e.target.value, 0, INPUT_LIMITS.MONEY_MAX))}
               placeholder="0"
             />
           </div>
@@ -194,9 +196,10 @@ export default function CashClosingPage() {
             <input
               type="number"
               min={0}
+              max={INPUT_LIMITS.MONEY_MAX}
               step={50}
               value={countedCash || ""}
-              onChange={(e) => setCountedCash(Math.max(0, Number(e.target.value) || 0))}
+              onChange={(e) => setCountedCash(clampNumber(e.target.value, 0, INPUT_LIMITS.MONEY_MAX))}
               placeholder="0"
             />
           </div>

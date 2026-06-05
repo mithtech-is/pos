@@ -2,6 +2,7 @@ import Database from "better-sqlite3";
 import { app, IpcMain } from "electron";
 import fs from "node:fs";
 import path from "node:path";
+import { canUseBranch } from "@pos/shared";
 import { OrdersRepository } from "./repositories/orders";
 import { SyncQueueRepository } from "./repositories/sync-queue";
 import { MasterDataRepository } from "./repositories/master-data";
@@ -107,9 +108,21 @@ export function registerDatabaseHandlers(ipc: IpcMain) {
   );
 
   // Orders ---------------------------------------------------------------
-  ipc.handle("db:createLocalOrder", (_e, payload: any) =>
-    repositories.orders().createOrder(payload),
-  );
+  ipc.handle("db:createLocalOrder", (_e, payload: any) => {
+    // Branch scope: a cashier assigned to specific outlets cannot ring up a
+    // sale for an outlet they aren't assigned to (managers/admins + unassigned
+    // cashiers are unrestricted). The UI already hides other outlets — this is
+    // the authoritative guard in case that's ever bypassed.
+    const cashier = payload?.cashier_id
+      ? repositories.users().findById(payload.cashier_id)
+      : null;
+    if (cashier && !canUseBranch(cashier, payload?.school_id)) {
+      throw new Error(
+        "branch_not_allowed: you are not assigned to the selected outlet",
+      );
+    }
+    return repositories.orders().createOrder(payload);
+  });
   ipc.handle("db:listLocalOrders", (_e, filter: any) =>
     repositories.orders().list(filter ?? {}),
   );

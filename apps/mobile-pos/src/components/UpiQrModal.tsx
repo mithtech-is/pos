@@ -6,6 +6,7 @@ import { Modal, View, Text, Linking } from "react-native";
 import QRCodeRaw from "react-native-qrcode-svg";
 const QRCode = QRCodeRaw as unknown as React.ComponentType<any>;
 import { Button, Input, Panel, Row, Title, Muted, inr2 } from "./ui";
+import { digitsOnly, INPUT_LIMITS } from "@pos/shared";
 import { colors, radius, spacing } from "../theme";
 
 interface Props {
@@ -127,9 +128,10 @@ export default function UpiQrModal({
           <Input
             label="UTR / Transaction id"
             value={utr}
-            onChangeText={setUtr}
+            onChangeText={(t) => setUtr(digitsOnly(t, INPUT_LIMITS.UTR_DIGITS))}
             placeholder="e.g. 401234567890"
             keyboardType="number-pad"
+            maxLength={INPUT_LIMITS.UTR_DIGITS}
             onSubmitEditing={submit}
           />
           {error && (

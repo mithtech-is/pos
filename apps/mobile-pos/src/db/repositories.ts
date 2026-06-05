@@ -293,11 +293,12 @@ export const masterData = {
           );
           await db.runAsync(
             `INSERT INTO local_users
-               (id, name, email, role, pin_hash, offline_access_expires_at, status, last_login_at, updated_at)
-               VALUES (?, ?, ?, ?, ?, ?, 'active', ?, ?)
+               (id, name, email, role, pin_hash, branch_ids, offline_access_expires_at, status, last_login_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)
              ON CONFLICT(id) DO UPDATE SET
                name = excluded.name, role = excluded.role,
                pin_hash = COALESCE(excluded.pin_hash, local_users.pin_hash),
+               branch_ids = excluded.branch_ids,
                offline_access_expires_at = excluded.offline_access_expires_at,
                updated_at = excluded.updated_at`,
             [
@@ -306,6 +307,7 @@ export const masterData = {
               u.email,
               u.role,
               u.offline_pin_hash ?? null,
+              JSON.stringify(Array.isArray(u.branch_ids) ? u.branch_ids : []),
               new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString(),
               now,
               now,
@@ -601,11 +603,22 @@ export const inventory = {
 /* ===========================================================================
    Users (offline PIN verification)
    =========================================================================== */
+function parseBranchIds(raw: unknown): string[] {
+  if (typeof raw !== "string" || !raw.length) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((x) => typeof x === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
 export const users = {
   async list(): Promise<any[]> {
-    return selectAll(
-      `SELECT id, name, email, role, status FROM local_users WHERE status = 'active'`,
+    const rows = await selectAll<any>(
+      `SELECT id, name, email, role, branch_ids, status FROM local_users WHERE status = 'active'`,
     );
+    return rows.map((r) => ({ ...r, branch_ids: parseBranchIds(r.branch_ids) }));
   },
   async upsert(payload: {
     id: string;
@@ -614,6 +627,7 @@ export const users = {
     role: string;
     offline_access_expires_at?: string | null;
     pin_hash?: string | null;
+    branch_ids?: string[] | null;
   }): Promise<void> {
     const now = new Date().toISOString();
     await execSql(`DELETE FROM local_users WHERE email = ? AND id != ?`, [
@@ -622,11 +636,12 @@ export const users = {
     ]);
     await execSql(
       `INSERT INTO local_users
-         (id, name, email, role, pin_hash, offline_access_expires_at, status, last_login_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, 'active', ?, ?)
+         (id, name, email, role, pin_hash, branch_ids, offline_access_expires_at, status, last_login_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)
          ON CONFLICT(id) DO UPDATE SET
            name = excluded.name, role = excluded.role,
            pin_hash = COALESCE(excluded.pin_hash, local_users.pin_hash),
+           branch_ids = COALESCE(excluded.branch_ids, local_users.branch_ids),
            last_login_at = excluded.last_login_at,
            updated_at = excluded.updated_at`,
       [
@@ -635,6 +650,9 @@ export const users = {
         payload.email,
         payload.role,
         payload.pin_hash ?? null,
+        payload.branch_ids === undefined || payload.branch_ids === null
+          ? null
+          : JSON.stringify(payload.branch_ids),
         payload.offline_access_expires_at ?? null,
         now,
         now,

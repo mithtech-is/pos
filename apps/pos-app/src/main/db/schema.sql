@@ -182,6 +182,7 @@ CREATE TABLE IF NOT EXISTS local_users (
   email TEXT NOT NULL UNIQUE,
   role TEXT NOT NULL,
   pin_hash TEXT,
+  branch_ids TEXT,            -- JSON array of outlet ids this user is scoped to (null/[] = all)
   offline_access_expires_at TEXT,
   status TEXT NOT NULL DEFAULT 'active',
   last_login_at TEXT,

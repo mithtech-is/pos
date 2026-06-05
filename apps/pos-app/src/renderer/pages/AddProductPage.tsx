@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { sanitizeNumericInput, INPUT_LIMITS } from "@pos/shared";
 
 /**
  * Add Product by Scan.
@@ -187,7 +188,7 @@ export default function AddProductPage() {
                 <label style={labelStyle}>Price (₹)</label>
                 <input
                   value={price}
-                  onChange={(e) => setPrice(e.target.value)}
+                  onChange={(e) => setPrice(sanitizeNumericInput(e.target.value, { max: INPUT_LIMITS.PRICE_MAX, decimals: true }))}
                   onKeyDown={(e) => e.key === "Enter" && void submit()}
                   placeholder="0.00"
                   inputMode="decimal"

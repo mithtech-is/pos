@@ -5,6 +5,8 @@ export interface AuthUser {
   name: string;
   email: string;
   role: string;
+  /** Outlets this user is scoped to. Empty = unrestricted (all branches). */
+  branch_ids?: string[];
 }
 
 interface AuthState {

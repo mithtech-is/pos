@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
-import { buildIdempotencyKey } from "@pos/shared";
+import { buildIdempotencyKey, clampInt } from "@pos/shared";
 import { useAuthStore } from "../state/auth";
 import ManagerPinModal from "../components/ManagerPinModal";
 
@@ -287,7 +287,7 @@ export default function ReturnsPage() {
                           onChange={(e) =>
                             updateLine(
                               it.id,
-                              Number(e.target.value) || 0,
+                              clampInt(e.target.value, 0, it.quantity),
                               sel?.reason ?? "size_issue",
                             )
                           }

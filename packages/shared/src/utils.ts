@@ -111,3 +111,101 @@ export function computePromoDiscount(
   else if (promo.type === "bogo") d = ctx.totalQty >= 2 ? ctx.cheapestUnit : 0;
   return Math.max(0, Math.min(d, subtotal));
 }
+
+/**
+ * Clamp any value to [min, max]. Blank / non-numeric / non-finite input
+ * (including NaN and Infinity) collapses to `min`. This is the single
+ * primitive behind all numeric input validation — it guarantees no negative
+ * and no runaway/"infinite" values reach state, the DB, or the sync queue.
+ */
+export function clampNumber(value: unknown, min: number, max: number): number {
+  const n = typeof value === "number" ? value : parseFloat(String(value ?? ""));
+  if (!Number.isFinite(n)) return min;
+  if (n < min) return min;
+  if (n > max) return max;
+  return n;
+}
+
+/** clampNumber, floored to a whole number — for quantities, stock, points. */
+export function clampInt(value: unknown, min: number, max: number): number {
+  return Math.floor(clampNumber(value, min, max));
+}
+
+/**
+ * Sanitize free-typed text for a numeric field and return a STRING that can be
+ * fed straight back into a controlled input. Strips everything but digits (and
+ * a single leading-group dot when `decimals` is allowed) — so a minus sign can
+ * never be entered — then clamps to [min, max]. Preserves a trailing "." while
+ * the user is mid-type (e.g. "12.") and keeps an empty field empty.
+ */
+export function sanitizeNumericInput(
+  text: string,
+  opts: { min?: number; max: number; decimals?: boolean },
+): string {
+  const { min = 0, max, decimals = false } = opts;
+  if (text == null) return "";
+  let cleaned = decimals ? text.replace(/[^0-9.]/g, "") : text.replace(/[^0-9]/g, "");
+  if (decimals) {
+    const dot = cleaned.indexOf(".");
+    if (dot !== -1) {
+      cleaned = cleaned.slice(0, dot + 1) + cleaned.slice(dot + 1).replace(/\./g, "");
+    }
+  }
+  if (cleaned === "" || cleaned === ".") return "";
+  const trailingDot = decimals && cleaned.endsWith(".");
+  const clamped = clampNumber(cleaned, min, max);
+  return trailingDot ? `${clamped}.` : String(clamped);
+}
+
+/** Keep only digits, capped to `maxLen` — for phone / PIN / reference fields. */
+export function digitsOnly(text: string, maxLen: number): string {
+  return String(text ?? "").replace(/[^0-9]/g, "").slice(0, maxLen);
+}
+
+/* ===========================================================================
+   Branch (outlet/store) access control
+   ---------------------------------------------------------------------------
+   A user can be scoped to a subset of branches. The rule, shared by the
+   backend, the desktop app, and the mobile app so they never disagree:
+     • managers / admins  → every branch (head-office staff are never locked out)
+     • cashier WITH assigned branch_ids → only those branches
+     • cashier WITHOUT assignments       → every branch (unrestricted default:
+       assigning at least one branch is what turns restriction ON)
+   =========================================================================== */
+
+/** Roles that always see every branch regardless of assignment. */
+export const ALL_BRANCH_ROLES = ["manager", "admin", "owner"] as const;
+
+export interface BranchScopedUser {
+  role?: string | null;
+  branch_ids?: string[] | null;
+}
+
+/** True only when this user is restricted to a specific set of branches. */
+export function userHasBranchRestriction(user: BranchScopedUser | null | undefined): boolean {
+  if (!user) return false;
+  if (user.role && ALL_BRANCH_ROLES.includes(user.role as (typeof ALL_BRANCH_ROLES)[number])) {
+    return false;
+  }
+  return Array.isArray(user.branch_ids) && user.branch_ids.length > 0;
+}
+
+/** Whether `user` is allowed to transact on the branch with id `branchId`. */
+export function canUseBranch(
+  user: BranchScopedUser | null | undefined,
+  branchId: string | null | undefined,
+): boolean {
+  if (!userHasBranchRestriction(user)) return true;
+  if (!branchId) return false;
+  return (user!.branch_ids as string[]).includes(branchId);
+}
+
+/** Filter a list of branches down to the ones `user` may see/select. */
+export function filterBranchesForUser<T extends { id: string }>(
+  branches: T[],
+  user: BranchScopedUser | null | undefined,
+): T[] {
+  if (!userHasBranchRestriction(user)) return branches;
+  const allowed = new Set(user!.branch_ids as string[]);
+  return branches.filter((b) => allowed.has(b.id));
+}

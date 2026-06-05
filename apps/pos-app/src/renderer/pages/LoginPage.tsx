@@ -78,6 +78,7 @@ export default function LoginPage() {
         name: data.user.name,
         email: data.user.email,
         role: data.user.role,
+        branch_ids: Array.isArray(data.user.branch_ids) ? data.user.branch_ids : [],
       });
       navigate("/pos");
     } catch (err) {
@@ -96,7 +97,13 @@ export default function LoginPage() {
       if (!result.ok) throw new Error(result.reason);
       const user = users.find((u) => u.id === selectedUserId);
       if (!user) throw new Error("User not found");
-      setUser({ id: user.id, name: user.name, email: user.email, role: user.role });
+      setUser({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        branch_ids: Array.isArray(user.branch_ids) ? user.branch_ids : [],
+      });
       navigate("/pos");
     } catch (err) {
       setError(`Offline unlock failed: ${(err as Error).message}`);

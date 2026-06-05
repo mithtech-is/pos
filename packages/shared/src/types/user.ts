@@ -12,6 +12,12 @@ export interface POSUser {
   email: string;
   role: UserRole;
   status: "active" | "inactive";
+  /**
+   * Branches (outlet/store ids) this user is scoped to. Empty/omitted means
+   * unrestricted (all branches). Managers/admins/owners always see all
+   * branches regardless of this value. See filterBranchesForUser().
+   */
+  branch_ids?: string[];
   offline_access_expires_at?: string | null;
   updated_at: string;
 }

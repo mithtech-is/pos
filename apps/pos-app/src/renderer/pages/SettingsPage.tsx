@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { sanitizeNumericInput, INPUT_LIMITS } from "@pos/shared";
 import { useThemeStore, type ThemePreference } from "../state/theme";
 import { useAuthStore } from "../state/auth";
 
@@ -198,9 +199,10 @@ export default function SettingsPage() {
               <input
                 type="number"
                 min={0}
+                max={INPUT_LIMITS.PERCENT_MAX}
                 step={0.5}
                 value={gstRate}
-                onChange={(e) => setGstRate(e.target.value)}
+                onChange={(e) => setGstRate(sanitizeNumericInput(e.target.value, { max: INPUT_LIMITS.PERCENT_MAX, decimals: true }))}
                 placeholder="18"
               />
               <div className="muted">Split equally into CGST + SGST on the invoice. 0 = no tax.</div>
@@ -230,8 +232,9 @@ export default function SettingsPage() {
             <input
               type="number"
               min={1}
+              max={INPUT_LIMITS.LOYALTY_RATE_MAX}
               value={loyaltyRate}
-              onChange={(e) => setLoyaltyRate(e.target.value)}
+              onChange={(e) => setLoyaltyRate(sanitizeNumericInput(e.target.value, { max: INPUT_LIMITS.LOYALTY_RATE_MAX }))}
               placeholder="100"
             />
             <div className="muted">
@@ -245,7 +248,7 @@ export default function SettingsPage() {
               min={0}
               max={100}
               value={marginPct}
-              onChange={(e) => setMarginPct(e.target.value)}
+              onChange={(e) => setMarginPct(sanitizeNumericInput(e.target.value, { max: INPUT_LIMITS.PERCENT_MAX, decimals: true }))}
               placeholder="40"
             />
             <div className="muted">Used to estimate gross profit on the Analytics page.</div>

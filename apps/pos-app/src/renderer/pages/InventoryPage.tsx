@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { sanitizeNumericInput, INPUT_LIMITS } from "@pos/shared";
 
 /**
  * Inventory / purchasing back-office:
@@ -146,8 +147,9 @@ export default function InventoryPage() {
                     <input
                       type="number"
                       min={0}
+                      max={INPUT_LIMITS.STOCK_MAX}
                       value={edits[i.sku]?.stock ?? ""}
-                      onChange={(e) => setEdits((p) => ({ ...p, [i.sku]: { ...p[i.sku], stock: e.target.value } }))}
+                      onChange={(e) => setEdits((p) => ({ ...p, [i.sku]: { ...p[i.sku], stock: sanitizeNumericInput(e.target.value, { max: INPUT_LIMITS.STOCK_MAX }) } }))}
                       style={{ width: 70 }}
                     />
                   </td>
@@ -155,8 +157,9 @@ export default function InventoryPage() {
                     <input
                       type="number"
                       min={0}
+                      max={INPUT_LIMITS.STOCK_MAX}
                       value={edits[i.sku]?.reorder ?? ""}
-                      onChange={(e) => setEdits((p) => ({ ...p, [i.sku]: { ...p[i.sku], reorder: e.target.value } }))}
+                      onChange={(e) => setEdits((p) => ({ ...p, [i.sku]: { ...p[i.sku], reorder: sanitizeNumericInput(e.target.value, { max: INPUT_LIMITS.STOCK_MAX }) } }))}
                       style={{ width: 70 }}
                     />
                   </td>
@@ -222,10 +225,10 @@ export default function InventoryPage() {
                   <option value="">SKU…</option>
                   {inventory.map((i) => <option key={i.sku} value={i.sku}>{i.sku} — {i.product_title}</option>)}
                 </select>
-                <input placeholder="Qty" type="number" min={1} value={l.qty} style={{ width: 80 }}
-                  onChange={(e) => setPoLines((p) => p.map((x, i) => (i === idx ? { ...x, qty: e.target.value } : x)))} />
-                <input placeholder="Cost ₹" type="number" min={0} value={l.cost} style={{ width: 100 }}
-                  onChange={(e) => setPoLines((p) => p.map((x, i) => (i === idx ? { ...x, cost: e.target.value } : x)))} />
+                <input placeholder="Qty" type="number" min={1} max={INPUT_LIMITS.QTY_MAX} value={l.qty} style={{ width: 80 }}
+                  onChange={(e) => setPoLines((p) => p.map((x, i) => (i === idx ? { ...x, qty: sanitizeNumericInput(e.target.value, { max: INPUT_LIMITS.QTY_MAX }) } : x)))} />
+                <input placeholder="Cost ₹" type="number" min={0} max={INPUT_LIMITS.PRICE_MAX} value={l.cost} style={{ width: 100 }}
+                  onChange={(e) => setPoLines((p) => p.map((x, i) => (i === idx ? { ...x, cost: sanitizeNumericInput(e.target.value, { max: INPUT_LIMITS.PRICE_MAX, decimals: true }) } : x)))} />
               </div>
             ))}
             <div className="row" style={{ marginTop: 10, gap: 8 }}>

@@ -72,6 +72,10 @@ const api = {
     ipcRenderer.invoke("pos:saveStore", body),
   setStoreActive: (payload: { id: string; active: boolean }) =>
     ipcRenderer.invoke("pos:setStoreActive", payload),
+  // Users & Branches (manager admin)
+  listUsersAdmin: () => ipcRenderer.invoke("pos:listUsersAdmin"),
+  setUserBranches: (payload: { id: string; branch_ids: string[] }) =>
+    ipcRenderer.invoke("pos:setUserBranches", payload),
   findKitByContext: (payload: {
     school_id: string;
     class_id: string;

@@ -45,3 +45,32 @@ export const SYNC_MAX_RETRIES = 5;
 
 /** Default offline session expiry — business policy can override. */
 export const DEFAULT_OFFLINE_SESSION_DAYS = 7;
+
+/**
+ * Bounds for every numeric input field across the POS (INR retail context).
+ * The lower bound is always 0 — no field can go negative — and each upper
+ * bound keeps a value realistic/achievable so a fat-finger, a stuck key, or a
+ * runaway entry can never push absurd ("infinite") numbers into the data.
+ * Single source of truth shared by the desktop app, the mobile app, and the
+ * backend so UI validation and server-side clamping always agree.
+ */
+export const INPUT_LIMITS = {
+  /** ₹1 crore — cash drawer float / counted totals. */
+  MONEY_MAX: 10_000_000,
+  /** ₹10 lakh — per-unit price, flat coupon value, PO line cost. */
+  PRICE_MAX: 1_000_000,
+  /** Line-item / purchase-order quantity. */
+  QTY_MAX: 9_999,
+  /** Stock on hand / reorder point. */
+  STOCK_MAX: 1_000_000,
+  /** Discount %, gross-margin %, GST/tax rate %. */
+  PERCENT_MAX: 100,
+  /** ₹ spent per loyalty point earned. */
+  LOYALTY_RATE_MAX: 100_000,
+  /** Indian mobile number length. */
+  MOBILE_DIGITS: 10,
+  /** Manager / login PIN length. */
+  PIN_DIGITS: 6,
+  /** UPI UTR / bank transaction reference length. */
+  UTR_DIGITS: 22,
+} as const;

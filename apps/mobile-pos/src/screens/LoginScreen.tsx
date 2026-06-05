@@ -12,6 +12,7 @@ import {
   ToastMessage,
   useTheme,
 } from "../design";
+import { digitsOnly, INPUT_LIMITS } from "@pos/shared";
 import { useAuthStore } from "../state/auth";
 import { selectOne } from "../db";
 import { settings, users } from "../db/repositories";
@@ -82,6 +83,7 @@ export default function LoginScreen() {
       }
       const data = payload.data ?? payload;
       await settings.set("access_token", data.access_token);
+      const branchIds = Array.isArray(data.user.branch_ids) ? data.user.branch_ids : [];
       await users.upsert({
         id: data.user.id,
         name: data.user.name,
@@ -89,12 +91,14 @@ export default function LoginScreen() {
         role: data.user.role,
         offline_access_expires_at: data.user.offline_access_expires_at,
         pin_hash: data.offline_pin_hash,
+        branch_ids: branchIds,
       });
       setUser({
         id: data.user.id,
         name: data.user.name,
         email: data.user.email,
         role: data.user.role,
+        branch_ids: branchIds,
       });
       void tick();
     } catch (err) {
@@ -141,7 +145,13 @@ export default function LoginScreen() {
       if (candidate.toLowerCase() !== digest.toLowerCase()) {
         throw new Error("Wrong PIN");
       }
-      setUser({ id: u.id, name: u.name, email: u.email, role: u.role });
+      setUser({
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        role: u.role,
+        branch_ids: Array.isArray(u.branch_ids) ? u.branch_ids : [],
+      });
     } catch (err) {
       setError(`Offline unlock failed: ${(err as Error).message}`);
     } finally {
@@ -259,9 +269,10 @@ export default function LoginScreen() {
             <Field
               label="PIN"
               value={pin}
-              onChangeText={setPin}
+              onChangeText={(t) => setPin(digitsOnly(t, INPUT_LIMITS.PIN_DIGITS))}
               secureTextEntry
               keyboardType="number-pad"
+              maxLength={INPUT_LIMITS.PIN_DIGITS}
               onSubmitEditing={loginOffline}
             />
             <Button variant="primary" size="lg" onPress={loginOffline} loading={busy} full>

@@ -8,6 +8,7 @@ import CustomersPage from "./pages/CustomersPage";
 import PromotionsPage from "./pages/PromotionsPage";
 import InventoryPage from "./pages/InventoryPage";
 import StoresPage from "./pages/StoresPage";
+import UsersPage from "./pages/UsersPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
 import OrdersPage from "./pages/OrdersPage";
 import PendingOrdersPage from "./pages/PendingOrdersPage";
@@ -26,6 +27,7 @@ import { useThemeStore } from "./state/theme";
 /** App shell for the standalone offline-first POS terminal. */
 export default function App() {
   const user = useAuthStore((s) => s.user);
+  const isManager = !!user && ["manager", "admin", "owner"].includes(user.role);
   const location = useLocation();
   const hydrateTheme = useThemeStore((s) => s.hydrate);
 
@@ -55,6 +57,7 @@ export default function App() {
               <NavLink to="/promotions" className={navClass}>Promotions</NavLink>
               <NavLink to="/inventory" className={navClass}>Inventory</NavLink>
               <NavLink to="/stores" className={navClass}>Stores</NavLink>
+              {isManager && <NavLink to="/users" className={navClass}>Users</NavLink>}
               <NavLink to="/orders" className={navClass}>Orders</NavLink>
               <NavLink to="/offline-trades" className={navClass}>Offline Orders</NavLink>
               <NavLink to="/returns" className={navClass}>Returns</NavLink>
@@ -80,6 +83,7 @@ export default function App() {
         <Route path="/promotions" element={<PromotionsPage />} />
         <Route path="/inventory" element={<InventoryPage />} />
         <Route path="/stores" element={<StoresPage />} />
+        <Route path="/users" element={<UsersPage />} />
         <Route path="/orders" element={<OrdersPage />} />
         <Route path="/offline-trades" element={<OfflineTradesPage />} />
         <Route path="/returns" element={<ReturnsPage />} />

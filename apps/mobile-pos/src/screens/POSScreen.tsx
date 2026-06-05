@@ -6,8 +6,7 @@ import {
   View,
   TextInput as RNTextInput,
 } from "react-native";
-import uuidv4 from "react-native-uuid";
-import { buildIdempotencyKey } from "@pos/shared";
+import { buildIdempotencyKey, sanitizeNumericInput, digitsOnly, clampInt, filterBranchesForUser, INPUT_LIMITS } from "@pos/shared";
 import {
   Button,
   Input,
@@ -27,7 +26,6 @@ import { useCartStore } from "../state/cart";
 import { audit, inventory, masterData, orders, settings, syncQueue } from "../db/repositories";
 import ManagerPinModal from "../components/ManagerPinModal";
 import UpiQrModal from "../components/UpiQrModal";
-import ManualEntryModal from "../components/ManualEntryModal";
 import CameraScannerModal from "../components/CameraScannerModal";
 import { Picker as MobilePicker, BottomSheetPicker } from "../components/Picker";
 import { printReceipt, shareReceiptPdf } from "../receipt";
@@ -84,7 +82,6 @@ export default function POSScreen() {
     payeeName: string;
     onPaid: (utr: string) => void;
   }>(null);
-  const [manualOpen, setManualOpen] = useState<{ barcode: string } | null>(null);
   const [cameraOpen, setCameraOpen] = useState(false);
 
   /* ----- pickers ----- */
@@ -160,9 +157,21 @@ export default function POSScreen() {
   }
 
   /* ----- load master data ----- */
+  // Outlets the signed-in user may sell from (managers/admins + unassigned
+  // cashiers see all; an assigned cashier sees only their branches).
   useEffect(() => {
-    (async () => setSchools(await masterData.listSchools()))().catch(() => {});
-  }, []);
+    (async () => {
+      const all = (await masterData.listSchools()) ?? [];
+      const visible = filterBranchesForUser(all, user);
+      setSchools(visible);
+      const current = useCartStore.getState().school_id;
+      if (current && !visible.some((s: any) => s.id === current)) {
+        cart.setSchool(null);
+      } else if (!current && visible.length === 1) {
+        cart.setSchool(visible[0].id);
+      }
+    })().catch(() => {});
+  }, [user]);
   useEffect(() => {
     if (!cart.school_id) {
       setClasses([]);
@@ -216,8 +225,7 @@ export default function POSScreen() {
     const variant: any = await masterData.findByBarcode(code);
     if (!variant) {
       flashScanner("miss");
-      showToast("error", `No product for "${code}"`);
-      setManualOpen({ barcode: code });
+      showToast("error", `No product for "${code}" — use Search to find it`);
       return;
     }
     cart.addLine({
@@ -246,22 +254,6 @@ export default function POSScreen() {
         ...prev,
       ].slice(0, 6),
     );
-  }
-
-  function commitManualEntry(entry: { barcode: string; name: string; size: string; price: number }) {
-    const id = `manual-${String(uuidv4.v4()).slice(0, 8)}`;
-    cart.addLine({
-      variant_id: id,
-      sku: entry.barcode || `MANUAL-${id.slice(-6)}`,
-      product_name: entry.name,
-      size: entry.size,
-      quantity: 1,
-      unit_price: entry.price,
-      discount: 0,
-      tax_rate: 0,
-    });
-    setManualOpen(null);
-    showToast("success", `Added: ${entry.name}`);
   }
 
   function addKitToCart() {
@@ -299,7 +291,7 @@ export default function POSScreen() {
       : 0;
 
   function onDiscountChange(text: string) {
-    setCartDiscount(text);
+    setCartDiscount(sanitizeNumericInput(text, { max: INPUT_LIMITS.PRICE_MAX, decimals: true }));
     const amt = Number(text) || 0;
     if (amt <= 0) {
       setDiscountApprovedBy(null);
@@ -579,8 +571,9 @@ export default function POSScreen() {
           <Input
             label="Customer mobile"
             value={cart.parent_mobile}
-            onChangeText={(t) => cart.setStudent(cart.student_name, t)}
+            onChangeText={(t) => cart.setStudent(cart.student_name, digitsOnly(t, INPUT_LIMITS.MOBILE_DIGITS))}
             keyboardType="phone-pad"
+            maxLength={INPUT_LIMITS.MOBILE_DIGITS}
           />
         </Col>
       </Panel>
@@ -619,14 +612,9 @@ export default function POSScreen() {
           }}
         />
         <View style={{ height: 8 }} />
-        <Row gap={8}>
-          <Button onPress={() => setCameraOpen(true)} variant="primary" style={{ flex: 1 }}>
-            📷 Open camera scanner
-          </Button>
-          <Button onPress={() => setManualOpen({ barcode: "" })} variant="ghost" style={{ flex: 1 }}>
-            ✏️ Add manually
-          </Button>
-        </Row>
+        <Button onPress={() => setCameraOpen(true)} variant="primary" style={{ width: "100%" }}>
+          📷 Open camera scanner
+        </Button>
       </Panel>
 
       {/* SEARCH */}
@@ -772,8 +760,9 @@ export default function POSScreen() {
             </View>
             <RNTextInput
               value={String(l.quantity)}
-              onChangeText={(t) => cart.updateQty(l.variant_id, Number(t) || 0)}
+              onChangeText={(t) => cart.updateQty(l.variant_id, clampInt(t, 1, INPUT_LIMITS.QTY_MAX))}
               keyboardType="number-pad"
+              maxLength={4}
               style={{
                 width: 56,
                 color: colors.text,
@@ -960,13 +949,6 @@ export default function POSScreen() {
         description={pinModal?.description}
         onApprove={(info) => pinModal?.onApprove(info)}
         onCancel={() => setPinModal(null)}
-      />
-
-      <ManualEntryModal
-        visible={!!manualOpen}
-        initialBarcode={manualOpen?.barcode}
-        onCancel={() => setManualOpen(null)}
-        onCommit={commitManualEntry}
       />
 
       <CameraScannerModal

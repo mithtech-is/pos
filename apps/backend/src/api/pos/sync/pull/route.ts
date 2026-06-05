@@ -94,6 +94,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
         name: [u.first_name, u.last_name].filter(Boolean).join(" ") || u.email,
         email: u.email,
         role: u.metadata?.role ?? "cashier",
+        branch_ids: Array.isArray(u.metadata?.branch_ids) ? u.metadata.branch_ids : [],
         offline_pin_hash: u.metadata?.offline_pin_hash,
         status: "active",
         updated_at: u.updated_at,

@@ -14,9 +14,22 @@ export function openDb(): Promise<SQLite.SQLiteDatabase> {
   dbPromise = (async () => {
     const db = await SQLite.openDatabaseAsync("pos.sqlite");
     await db.execAsync(SCHEMA_SQL);
+    await ensureColumns(db);
     return db;
   })();
   return dbPromise;
+}
+
+/**
+ * Idempotent additive columns for databases created before a column existed.
+ * Cheap to run on every open; SCHEMA_SQL handles fresh installs, this handles
+ * upgrades without a full migration framework.
+ */
+async function ensureColumns(db: SQLite.SQLiteDatabase): Promise<void> {
+  const cols = await db.getAllAsync<{ name: string }>("PRAGMA table_info(local_users)");
+  if (!cols.some((c) => c.name === "branch_ids")) {
+    await db.execAsync("ALTER TABLE local_users ADD COLUMN branch_ids TEXT");
+  }
 }
 
 export async function closeDb(): Promise<void> {

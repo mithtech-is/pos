@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Modal, View, Text } from "react-native";
 import { Button, Input, Panel, Row, Title, Muted } from "./ui";
+import { digitsOnly, INPUT_LIMITS } from "@pos/shared";
 import { colors, radius, spacing } from "../theme";
 import { verifyManagerPin } from "../sync";
 
@@ -61,9 +62,10 @@ export default function ManagerPinModal({
           <Input
             label="Manager PIN"
             value={pin}
-            onChangeText={setPin}
+            onChangeText={(t) => setPin(digitsOnly(t, INPUT_LIMITS.PIN_DIGITS))}
             secureTextEntry
             keyboardType="number-pad"
+            maxLength={INPUT_LIMITS.PIN_DIGITS}
             autoFocus
             onSubmitEditing={submit}
           />

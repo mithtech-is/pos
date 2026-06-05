@@ -4,6 +4,10 @@ import {
   computeGstBreakup,
   computePromoDiscount,
   isPromoActiveAt,
+  clampInt,
+  clampNumber,
+  filterBranchesForUser,
+  INPUT_LIMITS,
   type PosPromotion,
 } from "@pos/shared";
 import { useAuthStore } from "../state/auth";
@@ -110,9 +114,21 @@ export default function POSPage() {
     return () => clearInterval(interval);
   }, [pinModal]);
 
+  // Outlets the signed-in user may sell from. Managers/admins (and cashiers
+  // with no assignment) see all; an assigned cashier sees only their branches.
   useEffect(() => {
-    (async () => setSchools(await window.pos.listSchools()))().catch(() => {});
-  }, []);
+    (async () => {
+      const all = (await window.pos.listSchools()) ?? [];
+      const visible = filterBranchesForUser(all, user);
+      setSchools(visible);
+      const current = useCartStore.getState().school_id;
+      if (current && !visible.some((s: any) => s.id === current)) {
+        cart.setSchool(null); // drop an outlet this user is no longer allowed to use
+      } else if (!current && visible.length === 1) {
+        cart.setSchool(visible[0].id); // single-branch cashier: auto-select
+      }
+    })().catch(() => {});
+  }, [user]);
 
   // Load any parked (held) sales persisted in local settings.
   useEffect(() => {
@@ -679,8 +695,14 @@ export default function POSPage() {
     <div>
       {/* Top context bar */}
       <div className="topbar" style={{ borderTop: "1px solid var(--border)" }}>
-        <select value={cart.school_id ?? ""} onChange={(e) => cart.setSchool(e.target.value || null)}>
-          <option value="">Select outlet...</option>
+        <select
+          value={cart.school_id ?? ""}
+          onChange={(e) => cart.setSchool(e.target.value || null)}
+          title={schools.length ? "Select outlet" : "No outlet assigned to your account — ask a manager"}
+        >
+          <option value="">
+            {schools.length ? "Select outlet..." : "No outlet assigned"}
+          </option>
           {schools.map((s) => (
             <option key={s.id} value={s.id}>{s.name} ({s.code})</option>
           ))}
@@ -893,8 +915,9 @@ export default function POSPage() {
                   <input
                     type="number"
                     min={1}
+                    max={INPUT_LIMITS.QTY_MAX}
                     value={l.quantity}
-                    onChange={(e) => cart.updateQty(l.variant_id, Math.max(1, Number(e.target.value) || 1))}
+                    onChange={(e) => cart.updateQty(l.variant_id, clampInt(e.target.value, 1, INPUT_LIMITS.QTY_MAX))}
                   />
                   <div className="line-total">
                     ₹{(l.quantity * l.unit_price - l.discount).toFixed(2)}
@@ -932,9 +955,7 @@ export default function POSPage() {
                       max={customer.loyalty_points}
                       value={redeemPoints || ""}
                       onChange={(e) =>
-                        setRedeemPoints(
-                          Math.max(0, Math.min(Number(e.target.value) || 0, customer.loyalty_points)),
-                        )
+                        setRedeemPoints(clampInt(e.target.value, 0, customer.loyalty_points))
                       }
                       style={{ width: 90 }}
                     />
@@ -972,9 +993,10 @@ export default function POSPage() {
                 <input
                   type="number"
                   min={0}
+                  max={INPUT_LIMITS.PRICE_MAX}
                   step={10}
                   value={cartDiscount || ""}
-                  onChange={(e) => requestDiscount(Number(e.target.value) || 0)}
+                  onChange={(e) => requestDiscount(clampNumber(e.target.value, 0, INPUT_LIMITS.PRICE_MAX))}
                   placeholder="0"
                 />
                 {effectiveDiscountPct > 0 && (

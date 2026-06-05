@@ -56,4 +56,21 @@ export function runMigrations(db: Database.Database) {
       "INSERT INTO _pos_migrations (id, applied_at) VALUES (?, ?)",
     ).run("001_baseline.sql", new Date().toISOString());
   }
+
+  // Idempotent additive columns. Running this every boot is cheap and keeps
+  // databases created before a column existed in sync without needing a new
+  // migration file in every distribution channel (dist-copy vs migrations dir).
+  ensureColumn(db, "local_users", "branch_ids", "TEXT");
+}
+
+/** Add `column` to `table` if it isn't already present. No-op otherwise. */
+function ensureColumn(
+  db: Database.Database,
+  table: string,
+  column: string,
+  type: string,
+) {
+  const cols = db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
+  if (cols.some((c) => c.name === column)) return;
+  db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`);
 }

@@ -1,4 +1,5 @@
 import { MODULE_KEYS } from "../modules";
+import { canUseBranch } from "@pos/shared";
 import type { OrderInput } from "@pos/shared";
 
 /**
@@ -121,6 +122,37 @@ export async function syncOfflineOrderEvent(
       payload: { inactive_variants: inactiveVariants },
     });
     // Spec § 15.1: allow already-printed order with warning; do not block sync.
+  }
+
+  // 7b. Branch scope — a cashier may only transact on branches assigned to
+  //     them (managers/admins are unrestricted; an unassigned cashier is also
+  //     unrestricted). The sale already happened offline so we never block it;
+  //     a branch violation raises a high-severity conflict for a manager to
+  //     review, consistent with the "print first, reconcile on sync" policy.
+  //     Reuses the `userModule` resolved in step 3 above.
+  if (userModule?.listUsers && input.order.cashier_id) {
+    const [cashier] = await userModule
+      .listUsers({ id: input.order.cashier_id })
+      .catch(() => []);
+    const scope = {
+      role: (cashier?.metadata as any)?.role ?? "cashier",
+      branch_ids: Array.isArray((cashier?.metadata as any)?.branch_ids)
+        ? ((cashier!.metadata as any).branch_ids as string[])
+        : [],
+    };
+    if (cashier && !canUseBranch(scope, input.order.school_id)) {
+      await sync.raiseConflict({
+        event_id: input.sync_event_id,
+        device_id: input.order.device_id,
+        conflict_type: "invalid_school_mapping",
+        severity: "high",
+        payload: {
+          cashier_id: input.order.cashier_id,
+          school_id: input.order.school_id,
+          allowed_branch_ids: scope.branch_ids,
+        },
+      });
+    }
   }
 
   // 8. Upsert student profile (if name provided).

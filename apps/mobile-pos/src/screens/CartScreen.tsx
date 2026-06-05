@@ -7,7 +7,7 @@ import {
 } from "react-native";
 import { useFocusEffect, useNavigation, useRoute } from "@react-navigation/native";
 import uuidv4 from "react-native-uuid";
-import { buildIdempotencyKey } from "@pos/shared";
+import { buildIdempotencyKey, sanitizeNumericInput, digitsOnly, filterBranchesForUser, INPUT_LIMITS } from "@pos/shared";
 import {
   BottomSheet,
   Button,
@@ -110,9 +110,20 @@ export default function CartScreen() {
   const [printBusy, setPrintBusy] = useState(false);
 
   /* ───────── lookup loads ───────── */
+  // Restrict the outlet picker to branches the signed-in user may use.
   useEffect(() => {
-    (async () => setSchools(await masterData.listSchools()))().catch(() => {});
-  }, []);
+    (async () => {
+      const all = (await masterData.listSchools()) ?? [];
+      const visible = filterBranchesForUser(all, user);
+      setSchools(visible);
+      const current = useCartStore.getState().school_id;
+      if (current && !visible.some((s: any) => s.id === current)) {
+        cart.setSchool(null);
+      } else if (!current && visible.length === 1) {
+        cart.setSchool(visible[0].id);
+      }
+    })().catch(() => {});
+  }, [user]);
 
   useEffect(() => {
     if (!cart.school_id) {
@@ -1030,9 +1041,10 @@ function CustomerSheet({
         <Field
           label="Customer mobile"
           value={mobile}
-          onChangeText={setMobile}
+          onChangeText={(t) => setMobile(digitsOnly(t, INPUT_LIMITS.MOBILE_DIGITS))}
           placeholder="10-digit"
           keyboardType="phone-pad"
+          maxLength={INPUT_LIMITS.MOBILE_DIGITS}
         />
         <View style={{ flexDirection: "row", gap: 8 }}>
           {(name || mobile) && (
@@ -1160,7 +1172,7 @@ function PromotionDialog({
         <Field
           label="Discount amount (₹)"
           value={amount}
-          onChangeText={setAmount}
+          onChangeText={(t) => setAmount(sanitizeNumericInput(t, { max: INPUT_LIMITS.PRICE_MAX, decimals: true }))}
           placeholder="0"
           keyboardType="number-pad"
         />

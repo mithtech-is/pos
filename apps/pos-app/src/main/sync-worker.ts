@@ -125,6 +125,7 @@ async function pullSync() {
             Date.now() + 7 * 24 * 60 * 60 * 1000,
           ).toISOString(),
           pin_hash: u.offline_pin_hash,
+          branch_ids: Array.isArray(u.branch_ids) ? u.branch_ids : [],
         });
       }
     }
@@ -424,6 +425,23 @@ export function registerSyncHandlers(ipc: IpcMain) {
     }),
   );
 
+  // Users & Branches (manager back-office; online — assignments live on the
+  // backend user.metadata and are pulled down to every device on next sync).
+  ipc.handle("pos:listUsersAdmin", () => call("/pos/users"));
+  ipc.handle(
+    "pos:setUserBranches",
+    async (_e, payload: { id: string; branch_ids: string[] }) => {
+      const r = await call(`/pos/users/${encodeURIComponent(payload.id)}/branches`, {
+        method: "POST",
+        body: JSON.stringify({ branch_ids: payload.branch_ids ?? [] }),
+      });
+      // Pull immediately so the new assignment is reflected in local_users
+      // (and therefore in this device's outlet picker) right away.
+      if (r.ok) await tick();
+      return r;
+    },
+  );
+
   /**
    * Verify a manager PIN for a sensitive action. Tries the backend first; if
    * the device is offline we fall back to the locally-cached manager_pin_hashes
@@ -471,6 +489,7 @@ export function registerSyncHandlers(ipc: IpcMain) {
         role: payload.user.role,
         offline_access_expires_at: payload.user.offline_access_expires_at,
         pin_hash: payload.user.offline_pin_hash,
+        branch_ids: Array.isArray(payload.user.branch_ids) ? payload.user.branch_ids : [],
       });
     }
     await tick();
