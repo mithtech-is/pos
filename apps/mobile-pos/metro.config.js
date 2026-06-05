@@ -24,6 +24,14 @@ const localNodeModules = path.join(projectRoot, "node_modules");
 
 const config = getDefaultConfig(projectRoot);
 
+// This app owns a dedicated dev-server port (8088), deliberately NOT Expo's
+// default 8081, so it never collides with other Expo projects on this machine.
+// The Expo URL is therefore always exp://<your-lan-ip>:8088. The package.json
+// scripts and start-mobile.bat also pass `--port 8088`; this is the backstop so
+// even a bare `npx expo start` lands on the same port. RCT_METRO_PORT overrides.
+const RESERVED_EXPO_PORT = Number(process.env.RCT_METRO_PORT) || 8088;
+config.server = { ...(config.server || {}), port: RESERVED_EXPO_PORT };
+
 config.watchFolders = [monorepoRoot];
 config.resolver.nodeModulesPaths = [
   localNodeModules,

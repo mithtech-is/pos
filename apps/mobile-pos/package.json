@@ -5,10 +5,10 @@
   "description": "Offline-first React Native (Expo) POS app, mirrors the Electron app's feature set.",
   "main": "index.ts",
   "scripts": {
-    "start": "expo start",
-    "android": "expo run:android",
-    "ios": "expo run:ios",
-    "web": "expo start --web",
+    "start": "expo start --port 8088",
+    "android": "expo run:android --port 8088",
+    "ios": "expo run:ios --port 8088",
+    "web": "expo start --web --port 8088",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
