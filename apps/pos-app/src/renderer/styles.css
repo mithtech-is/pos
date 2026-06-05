@@ -321,15 +321,30 @@ label {
    ============================================================ */
 .layout {
   display: grid;
-  grid-template-rows: 64px 1fr;
+  /* Header row is auto, not a fixed 64px: with a long wrapping nav the bar can
+     be taller than one line, and a fixed row let it overflow on top of the page
+     content (covering/blocking the first controls). `auto` always allocates the
+     header its true height; the content row (1fr) scrolls beneath it. */
+  grid-template-rows: auto 1fr;
   height: 100%;
+  min-height: 0;
   background: var(--bg);
+}
+/* The page area below the header scrolls within the viewport instead of letting
+   the header overlap it. Works at every width — responsive, not a fixed ratio. */
+.layout > :nth-child(2) {
+  overflow-y: auto;
+  min-height: 0;
 }
 .topbar {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;            /* wrap to multiple lines instead of overflowing */
   gap: 14px;
-  padding: 0 24px;
+  row-gap: 10px;
+  padding: 10px 24px;
+  min-height: 64px;
+  box-sizing: border-box;
   background: var(--bg);
   border-bottom: 1px solid var(--border);
   z-index: 10;
@@ -349,7 +364,9 @@ label {
 }
 .nav {
   display: flex;
+  flex-wrap: wrap;     /* let the 19 nav links wrap onto more rows on any screen */
   gap: 2px;
+  row-gap: 4px;
   margin-left: auto;
 }
 .nav a {
@@ -865,3 +882,34 @@ tbody tr:hover {
 .flex-1 { flex: 1; }
 .grow { flex-grow: 1; }
 .spacer { flex: 1; }
+
+/* ============================================================
+   Responsive — adapt to smaller laptops / tablets / narrow windows.
+   These only activate below the breakpoints; the wide-screen layout
+   above is left unchanged.
+   ============================================================ */
+@media (max-width: 1180px) {
+  /* Let the top bar grow and the nav wrap so the menu never clips. */
+  .layout { grid-template-rows: auto 1fr; }
+  .layout > :nth-child(2) { overflow-y: auto; min-height: 0; }
+  .topbar { flex-wrap: wrap; padding: 8px 16px; row-gap: 8px; }
+  .topbar select, .topbar input { min-width: 140px; flex: 1 1 160px; }
+  .nav { flex-wrap: wrap; margin-left: 0; width: 100%; }
+
+  /* Stack the three POS panes and let the page scroll as one. */
+  .pos-grid { grid-template-columns: 1fr; height: auto; }
+  .pos-pane { overflow: visible; min-height: auto; }
+
+  /* Wide tables stay usable inside a narrow panel. */
+  .panel { overflow-x: auto; }
+}
+
+@media (max-width: 820px) {
+  .login-shell { grid-template-columns: 1fr; padding: 24px; }
+  .login-hero { display: none; }
+  .login-card { margin: 0 auto; }
+  .cart-row { grid-template-columns: 1fr 56px 80px 28px; gap: 6px; }
+  .total-grand { font-size: 22px; }
+  h1 { font-size: 26px; }
+  h2 { font-size: 19px; }
+}
