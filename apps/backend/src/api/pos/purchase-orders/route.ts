@@ -34,8 +34,8 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     const { storeSvc, store, pos } = await loadStore((req as any).scope);
     const cleanLines = lines.map((l) => ({
       sku: String(l.sku).trim(),
-      qty: Number(l.qty),
-      cost: Number(l.cost ?? 0),
+      qty: Math.max(1, Number(l.qty) || 1),
+      cost: Math.max(0, Number(l.cost ?? 0) || 0),
     }));
     const total = cleanLines.reduce((s, l) => s + l.qty * l.cost, 0);
     const po = {

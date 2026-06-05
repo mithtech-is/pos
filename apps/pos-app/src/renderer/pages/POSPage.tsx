@@ -894,7 +894,7 @@ export default function POSPage() {
                     type="number"
                     min={1}
                     value={l.quantity}
-                    onChange={(e) => cart.updateQty(l.variant_id, Number(e.target.value))}
+                    onChange={(e) => cart.updateQty(l.variant_id, Math.max(1, Number(e.target.value) || 1))}
                   />
                   <div className="line-total">
                     ₹{(l.quantity * l.unit_price - l.discount).toFixed(2)}

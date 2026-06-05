@@ -158,7 +158,7 @@ export default function CashClosingPage() {
               min={0}
               step={50}
               value={openingFloat || ""}
-              onChange={(e) => setOpeningFloat(Number(e.target.value) || 0)}
+              onChange={(e) => setOpeningFloat(Math.max(0, Number(e.target.value) || 0))}
               placeholder="0"
             />
           </div>
@@ -196,7 +196,7 @@ export default function CashClosingPage() {
               min={0}
               step={50}
               value={countedCash || ""}
-              onChange={(e) => setCountedCash(Number(e.target.value) || 0)}
+              onChange={(e) => setCountedCash(Math.max(0, Number(e.target.value) || 0))}
               placeholder="0"
             />
           </div>

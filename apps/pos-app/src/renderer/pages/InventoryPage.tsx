@@ -54,8 +54,8 @@ export default function InventoryPage() {
     if (!e) return;
     const res = await window.pos.updateInventory({
       sku,
-      set_stock: Number(e.stock),
-      reorder_point: Number(e.reorder),
+      set_stock: Math.max(0, Number(e.stock) || 0),
+      reorder_point: Math.max(0, Number(e.reorder) || 0),
     });
     if (res?.ok) await loadAll();
     else setMsg(res?.error ?? "Update failed (offline?)");
@@ -79,7 +79,7 @@ export default function InventoryPage() {
   async function createPO() {
     const lines = poLines
       .filter((l) => l.sku && Number(l.qty) > 0)
-      .map((l) => ({ sku: l.sku, qty: Number(l.qty), cost: Number(l.cost) || 0 }));
+      .map((l) => ({ sku: l.sku, qty: Math.max(1, Number(l.qty) || 0), cost: Math.max(0, Number(l.cost) || 0) }));
     if (lines.length === 0) {
       setMsg("Add at least one line with a SKU and quantity.");
       return;
@@ -145,6 +145,7 @@ export default function InventoryPage() {
                   <td>
                     <input
                       type="number"
+                      min={0}
                       value={edits[i.sku]?.stock ?? ""}
                       onChange={(e) => setEdits((p) => ({ ...p, [i.sku]: { ...p[i.sku], stock: e.target.value } }))}
                       style={{ width: 70 }}
@@ -153,6 +154,7 @@ export default function InventoryPage() {
                   <td>
                     <input
                       type="number"
+                      min={0}
                       value={edits[i.sku]?.reorder ?? ""}
                       onChange={(e) => setEdits((p) => ({ ...p, [i.sku]: { ...p[i.sku], reorder: e.target.value } }))}
                       style={{ width: 70 }}
@@ -205,6 +207,12 @@ export default function InventoryPage() {
                 {suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             </div>
+            {inventory.length === 0 && (
+              <div className="muted" style={{ marginTop: 8 }}>
+                No products loaded yet — open the <strong>Stock</strong> tab (and make sure the
+                backend is reachable) so SKUs appear in the dropdown below.
+              </div>
+            )}
             {poLines.map((l, idx) => (
               <div className="row" key={idx} style={{ marginTop: 8, gap: 8 }}>
                 <select
@@ -214,9 +222,9 @@ export default function InventoryPage() {
                   <option value="">SKU…</option>
                   {inventory.map((i) => <option key={i.sku} value={i.sku}>{i.sku} — {i.product_title}</option>)}
                 </select>
-                <input placeholder="Qty" type="number" value={l.qty} style={{ width: 80 }}
+                <input placeholder="Qty" type="number" min={1} value={l.qty} style={{ width: 80 }}
                   onChange={(e) => setPoLines((p) => p.map((x, i) => (i === idx ? { ...x, qty: e.target.value } : x)))} />
-                <input placeholder="Cost ₹" type="number" value={l.cost} style={{ width: 100 }}
+                <input placeholder="Cost ₹" type="number" min={0} value={l.cost} style={{ width: 100 }}
                   onChange={(e) => setPoLines((p) => p.map((x, i) => (i === idx ? { ...x, cost: e.target.value } : x)))} />
               </div>
             ))}

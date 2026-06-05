@@ -29,7 +29,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
   const body = (req.body ?? {}) as any;
   const code = String(body.code ?? "").trim().toUpperCase();
   const type = body.type;
-  const value = Number(body.value ?? 0);
+  const value = Math.max(0, Number(body.value ?? 0) || 0);
   if (!code) return badRequest(res, "code is required");
   if (!["percent", "flat", "bogo"].includes(type)) {
     return badRequest(res, "type must be percent, flat or bogo");
@@ -46,7 +46,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       code,
       type,
       value,
-      min_subtotal: body.min_subtotal != null ? Number(body.min_subtotal) : null,
+      min_subtotal: body.min_subtotal != null ? Math.max(0, Number(body.min_subtotal) || 0) : null,
       starts_at: body.starts_at || null,
       ends_at: body.ends_at || null,
       active: body.active !== false,

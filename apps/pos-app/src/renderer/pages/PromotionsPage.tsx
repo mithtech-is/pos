@@ -42,7 +42,7 @@ export default function PromotionsPage() {
         code: c,
         type,
         value: Number(value) || 0,
-        min_subtotal: minSubtotal ? Number(minSubtotal) : null,
+        min_subtotal: minSubtotal ? Math.max(0, Number(minSubtotal) || 0) : null,
         starts_at: startsAt || null,
         ends_at: endsAt || null,
         active: true,

@@ -76,12 +76,12 @@ export default function SettingsPage() {
       key: "allow_negative_stock",
       value: allowNegativeStock,
     });
-    await window.pos.setSetting({ key: "gst_rate", value: Number(gstRate) || 0 });
+    await window.pos.setSetting({ key: "gst_rate", value: Math.max(0, Number(gstRate) || 0) });
     await window.pos.setSetting({ key: "price_includes_tax", value: priceIncludesTax });
     await window.pos.setSetting({ key: "hsn_code", value: hsnCode });
     await window.pos.setSetting({
       key: "loyalty_rupees_per_point",
-      value: Number(loyaltyRate) || 100,
+      value: Math.max(1, Number(loyaltyRate) || 100),
     });
     setSaved(true);
     setTimeout(() => setSaved(false), 1500);

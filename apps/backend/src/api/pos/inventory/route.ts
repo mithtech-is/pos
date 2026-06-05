@@ -55,9 +55,12 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     if (!v) return notFound(res, "No variant with that SKU");
     const m = v.metadata ?? {};
     let stock = Number(m.stock_on_hand ?? 0);
-    if (body.set_stock != null) stock = Number(body.set_stock);
-    if (body.add_stock != null) stock += Number(body.add_stock);
-    const reorder = body.reorder_point != null ? Number(body.reorder_point) : Number(m.reorder_point ?? 0);
+    if (body.set_stock != null) stock = Math.max(0, Number(body.set_stock) || 0);
+    if (body.add_stock != null) stock = Math.max(0, stock + (Number(body.add_stock) || 0));
+    const reorder =
+      body.reorder_point != null
+        ? Math.max(0, Number(body.reorder_point) || 0)
+        : Number(m.reorder_point ?? 0);
     await productSvc.updateProductVariants(v.id, {
       metadata: { ...m, stock_on_hand: stock, reorder_point: reorder },
     });
