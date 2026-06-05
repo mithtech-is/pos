@@ -39,7 +39,7 @@ export default function OrdersPage() {
     const order = await window.pos.getLocalOrder(orderId);
     if (!order) return;
     const distributorName =
-      ((await window.pos.getSetting("distributor_name")) as string) ?? "ABC Uniforms";
+      ((await window.pos.getSetting("distributor_name")) as string) ?? "CounterFlow Store";
     await window.pos.printReceipt({
       distributor_name: distributorName,
       receipt_number: `R-${order.local_order_number}`,
@@ -63,9 +63,7 @@ export default function OrdersPage() {
 
   /**
    * Clone a past order into the current cart so the cashier can sell the same
-   * items again. School/class/student info is preserved; cashier can still edit
-   * sizes (the spec's most common use case: parent comes back for size 30 of
-   * the shirt they bought in size 28).
+   * items again.
    */
   async function reorder(orderId: number) {
     const order = await window.pos.getLocalOrder(orderId);
@@ -92,9 +90,9 @@ export default function OrdersPage() {
   return (
     <div className="panel" style={{ margin: 12 }}>
       <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
-        <h2 style={{ margin: 0 }}>Trades</h2>
+        <h2 style={{ margin: 0 }}>Orders</h2>
         <input
-          placeholder="Filter by trade # / mobile / client name"
+          placeholder="Filter by order # / mobile / customer name"
           value={query}
           onChange={(e) => applyFilter(e.target.value)}
           style={{ maxWidth: 320 }}
@@ -104,8 +102,8 @@ export default function OrdersPage() {
         <thead>
           <tr>
             <th>Local #</th>
-            <th>Student / Mobile</th>
-            <th>School</th>
+            <th>Customer / Mobile</th>
+            <th>Outlet</th>
             <th>Total</th>
             <th>Sync</th>
             <th>Created</th>

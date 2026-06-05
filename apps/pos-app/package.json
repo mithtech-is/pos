@@ -2,7 +2,7 @@
   "name": "@pos/pos-app",
   "version": "0.1.0",
   "private": true,
-  "description": "Offline-first Electron + React POS app for the school uniform distributor.",
+  "description": "Offline-first Electron + React terminal for standalone POS operations.",
   "main": "dist/main/main/main.js",
   "scripts": {
     "dev": "vite",
@@ -42,8 +42,8 @@
     "wait-on": "^7.2.0"
   },
   "build": {
-    "appId": "com.example.schooluniformpos",
-    "productName": "School Uniform POS",
+    "appId": "com.counterflow.pos",
+    "productName": "CounterFlow POS",
     "files": [
       "dist/**/*",
       "package.json"

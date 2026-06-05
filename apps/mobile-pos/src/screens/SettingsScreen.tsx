@@ -17,6 +17,7 @@ import {
 import { TopBar } from "../navigation/TopBar";
 import { settings } from "../db/repositories";
 import { useAuthStore } from "../state/auth";
+import { DEFAULT_BACKEND_URL } from "../config";
 
 /**
  * Settings — light, sectioned screen.
@@ -48,11 +49,11 @@ export default function SettingsScreen() {
 
   useEffect(() => {
     (async () => {
-      setBackendUrl((await settings.get<string>("backend_url")) ?? "http://localhost:9000");
+      setBackendUrl((await settings.get<string>("backend_url")) ?? DEFAULT_BACKEND_URL);
       setDeviceCode((await settings.get<string>("device_code")) ?? "POS001");
       setDeviceToken((await settings.get<string>("device_token")) ?? "");
       setDistName(
-        (await settings.get<string>("distributor_name")) ?? "Trail Blaze Retail Pvt Ltd",
+        (await settings.get<string>("distributor_name")) ?? "CounterFlow Store",
       );
       setDistAddress(
         (await settings.get<string>("distributor_address")) ??
@@ -60,7 +61,7 @@ export default function SettingsScreen() {
       );
       setDistGstin((await settings.get<string>("distributor_gstin")) ?? "");
       setUpiVpa((await settings.get<string>("upi_vpa")) ?? "");
-      setUpiPayee((await settings.get<string>("upi_payee_name")) ?? "Trail Blaze Retail");
+      setUpiPayee((await settings.get<string>("upi_payee_name")) ?? "CounterFlow Store");
       setAllowNegative((await settings.get<boolean>("allow_negative_stock")) === true);
     })().catch(() => {});
   }, []);
@@ -245,7 +246,7 @@ export default function SettingsScreen() {
                 placeholder="trailblaze@hdfcbank"
               />
               <Field
-                label="Payee name (shown in parent's UPI app)"
+                label="Payee name (shown in customer's UPI app)"
                 value={upiPayee}
                 onChangeText={setUpiPayee}
               />

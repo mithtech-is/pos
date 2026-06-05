@@ -1,0 +1,27 @@
+# Keep the backend build context small and avoid baking host-only artifacts.
+**/node_modules
+**/dist
+**/.medusa
+**/release
+**/build
+**/out
+**/.cache
+**/coverage
+
+# Desktop (Electron) and mobile (Expo) apps are never containerized.
+apps/pos-app
+apps/mobile-pos
+
+# Host env files — the container gets its env from docker-compose (.env.docker).
+**/.env
+**/.env.*
+
+# VCS / editor / logs / local databases
+.git
+.gitignore
+**/*.log
+**/*.sqlite
+**/*.sqlite-journal
+**/*.db
+.vscode
+.idea

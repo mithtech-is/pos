@@ -1,8 +1,8 @@
 {
-  "name": "school-uniform-pos",
+  "name": "counterflow-pos",
   "version": "0.1.0",
   "private": true,
-  "description": "Offline-first POS system for a school-uniform distributor (Medusa.js v2 backend + Electron/React POS app).",
+  "description": "Offline-first standalone POS system with Medusa.js v2 backend and Electron/React terminal app.",
   "workspaces": [
     "apps/*",
     "packages/*"
@@ -15,7 +15,13 @@
     "pos:build": "npm --workspace apps/pos-app run build",
     "pos:package": "npm --workspace apps/pos-app run package",
     "shared:build": "npm --workspace packages/shared run build",
-    "typecheck": "npm --workspaces --if-present run typecheck"
+    "typecheck": "npm --workspaces --if-present run typecheck",
+    "docker:up": "docker compose up -d --build",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f backend",
+    "docker:migrate": "docker compose exec backend npx medusa db:migrate",
+    "docker:seed": "docker compose exec -T backend sh -c \"npm run seed && npx medusa exec ./src/scripts/seed-users.ts\"",
+    "docker:reset-data": "docker compose down -v"
   },
   "engines": {
     "node": ">=20"
@@ -24,6 +30,7 @@
     "ajv": "^8.17.1"
   },
   "dependencies": {
+    "field-sales-platform": "file:../../../ayush/FieldSales",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   }

@@ -129,7 +129,7 @@ export default function CashClosingPage() {
               <div className="label">💵 Cash</div>
               <div className="value">₹{totals.cash.toFixed(0)}</div>
             </div>
-            <div className="stat info">
+            <div className="stat">
               <div className="label">📱 UPI</div>
               <div className="value">₹{totals.upi.toFixed(0)}</div>
             </div>
@@ -213,7 +213,7 @@ export default function CashClosingPage() {
             {busy ? "Closing…" : "Close shift"}
           </button>
           {message && (
-            <div className="muted" style={{ color: "var(--info)" }}>{message}</div>
+            <div className="muted" style={{ color: "var(--text-soft)" }}>{message}</div>
           )}
         </div>
       </div>

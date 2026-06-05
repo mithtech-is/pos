@@ -48,7 +48,7 @@ export default function CameraScannerModal({ visible, onScan, onCancel }: Props)
           <Row style={{ justifyContent: "space-between" }}>
             <View>
               <Title>📷 Scan barcode</Title>
-              <Muted>Point the camera at a uniform tag.</Muted>
+              <Muted>Point the camera at a product barcode.</Muted>
             </View>
             <Button onPress={onCancel} variant="ghost">Done</Button>
           </Row>

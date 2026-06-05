@@ -1,18 +1,18 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 /**
- * Offline Trades — the compliance officer's audit view.
+ * Offline Orders — the manager officer's audit view.
  *
- * Lists every trade that was booked while the terminal was offline. Source:
+ * Lists every order that was booked while the terminal was offline. Source:
  * `local_orders` rows where `created_offline = 1`. The pill on each row
  * shows the current sync state (synced / pending / failed / conflict) so
- * compliance can see at a glance which trades are still awaiting upload
+ * manager can see at a glance which orders are still awaiting upload
  * and which have already been reconciled with the central book.
  *
- * Why this matters for an unlisted-shares dealer:
- *   • SEBI requires every off-exchange trade to be on a contract note.
- *   • Compliance has to be able to prove which trades happened during
+ * Why this matters for an standalone POS terminal:
+ *   • Offline orders need a clear audit trail.
+ *   • Manager has to be able to prove which orders happened during
  *     internet outages and that none were lost.
  *   • Exporting to CSV makes it trivial to ship the day's offline ledger
  *     to the auditor.
@@ -38,7 +38,7 @@ function inr(n: number): string {
   return `₹${Number(n ?? 0).toLocaleString("en-IN", { maximumFractionDigits: 2, minimumFractionDigits: 2 })}`;
 }
 
-export default function OfflineTradesPage() {
+export default function OfflineOrdersPage() {
   const navigate = useNavigate();
   const [rows, setRows] = useState<TradeRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -94,13 +94,13 @@ export default function OfflineTradesPage() {
 
   function exportCsv() {
     const header = [
-      "local_trade_id",
+      "local_order_id",
       "server_id",
-      "client_name",
-      "client_mobile",
+      "customer_name",
+      "customer_mobile",
       "amount_inr",
-      "settlement_mode",
-      "settlement_ref",
+      "payment_mode",
+      "payment_ref",
       "sync_status",
       "created_at",
     ];
@@ -124,7 +124,7 @@ export default function OfflineTradesPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `offline-trades-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `offline-orders-${new Date().toISOString().slice(0, 10)}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -139,10 +139,10 @@ export default function OfflineTradesPage() {
   return (
     <div style={{ padding: 24, maxWidth: 1400, margin: "0 auto" }}>
       <div style={{ marginBottom: 14 }}>
-        <h2 style={{ fontSize: 32, marginBottom: 4 }}>Offline Trades</h2>
+        <h2 style={{ fontSize: 32, marginBottom: 4 }}>Offline Orders</h2>
         <div className="muted">
-          Every trade booked while this terminal was offline. Use this view to
-          confirm everything has settled with the central book before
+          Every order booked while this terminal was offline. Use this view to
+          confirm everything has synced with the backend before
           end-of-day reconciliation.
         </div>
       </div>
@@ -150,7 +150,7 @@ export default function OfflineTradesPage() {
       {/* ── Summary stat cards ── */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 18 }}>
         <div className="stat">
-          <div className="label">Total offline trades</div>
+          <div className="label">Total offline orders</div>
           <div className="value">{stats.total}</div>
         </div>
         <div className="stat info">
@@ -168,7 +168,7 @@ export default function OfflineTradesPage() {
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search by trade #, client, mobile, ref…"
+          placeholder="Search by order #, customer, mobile, ref…"
           style={{ maxWidth: 420 }}
         />
         <FilterPill label="All" active={filter === "all"} onClick={() => setFilter("all")} />
@@ -192,23 +192,23 @@ export default function OfflineTradesPage() {
       <div className="panel" style={{ padding: 0, overflow: "hidden" }}>
         {loading ? (
           <div className="muted" style={{ padding: 24, textAlign: "center" }}>
-            Loading offline trades…
+            Loading offline orders…
           </div>
         ) : filtered.length === 0 ? (
           <div style={{ padding: 48, textAlign: "center", color: "var(--muted)" }}>
             <div style={{ fontSize: 48, marginBottom: 8, opacity: 0.5 }}>✓</div>
             {query || filter !== "all"
-              ? "No offline trades match the current filter."
-              : "No offline trades on this terminal. Every trade so far was booked while online."}
+              ? "No offline orders match the current filter."
+              : "No offline orders on this terminal. Every order so far was booked while online."}
           </div>
         ) : (
           <table>
             <thead>
               <tr>
-                <th>Local trade #</th>
-                <th>Client</th>
+                <th>Local order #</th>
+                <th>Customer</th>
                 <th className="right">Amount</th>
-                <th>Settlement</th>
+                <th>Payment</th>
                 <th>Status</th>
                 <th>Booked at</th>
               </tr>
@@ -219,7 +219,7 @@ export default function OfflineTradesPage() {
                   key={r.id}
                   style={{ cursor: "pointer" }}
                   onClick={() => navigate(`/orders?focus=${r.id}`)}
-                  title="Open in Trades"
+                  title="Open in Orders"
                 >
                   <td>
                     <span className="kbd">{r.local_order_number}</span>
@@ -314,3 +314,4 @@ function escapeCsv(value: string): string {
   }
   return s;
 }
+

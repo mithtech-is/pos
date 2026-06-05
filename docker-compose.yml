@@ -1,0 +1,65 @@
+name: counterflow-pos
+
+# One command brings up the whole POS server side:
+#   docker compose up -d --build
+#
+# The Medusa backend (the shared POS server that the Electron desktop app and the
+# Expo mobile app both talk to) is pinned to host port 9000. That port is reserved
+# for the POS only — if something else already holds 9000, `docker compose up`
+# fails fast instead of silently drifting to another port.
+#
+# Postgres is published on host port 5433 (host 5432 is already taken by a local
+# Postgres). The backend reaches the database over the internal Docker network as
+# db:5432, so the host mapping only matters for external tools (psql, GUI, etc.).
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: pos-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: medusa
+      POSTGRES_PASSWORD: medusa
+      POSTGRES_DB: counterflow_pos
+    ports:
+      - "5433:5432"
+    volumes:
+      - pos-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U medusa -d counterflow_pos"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  backend:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+    container_name: pos-backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - ./apps/backend/.env.docker
+    environment:
+      NODE_ENV: development
+      PORT: "9000"
+      # Override whatever DATABASE_URL .env.docker might carry — inside the
+      # network the database is reachable as `db`, not localhost.
+      DATABASE_URL: postgres://medusa:medusa@db:5432/counterflow_pos
+      # Consumed by docker-entrypoint.sh to wait for the DB before migrating.
+      DB_HOST: db
+      DB_PORT: "5432"
+    ports:
+      # THE fixed POS port. Reserved for the POS backend only.
+      - "9000:9000"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:9000/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 180s
+
+volumes:
+  pos-db-data:

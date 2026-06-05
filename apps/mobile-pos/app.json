@@ -1,42 +1,36 @@
 {
   "expo": {
-    "name": "School Uniform POS",
-    "slug": "school-uniform-pos",
+    "name": "CounterFlow POS",
+    "slug": "counterflow-pos",
     "version": "0.1.0",
     "orientation": "default",
-    "icon": "./assets/icon.png",
-    "scheme": "schooluniformpos",
+    "scheme": "counterflowpos",
     "userInterfaceStyle": "dark",
     "splash": {
-      "backgroundColor": "#0b1120"
+      "backgroundColor": "#0e0e0e"
     },
     "assetBundlePatterns": [
       "**/*"
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.example.schooluniformpos",
+      "bundleIdentifier": "com.counterflow.pos",
       "infoPlist": {
         "NSCameraUsageDescription": "Used to scan product barcodes."
       }
     },
     "android": {
-      "package": "com.example.schooluniformpos",
-      "adaptiveIcon": {
-        "backgroundColor": "#0b1120"
-      },
+      "package": "com.counterflow.pos",
       "permissions": [
         "CAMERA"
       ]
     },
-    "web": {
-      "favicon": "./assets/favicon.png"
-    },
+    "web": {},
     "plugins": [
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow the POS to scan uniform barcodes with the camera."
+          "cameraPermission": "Allow the POS to scan product barcodes with the camera."
         }
       ],
       "expo-secure-store",

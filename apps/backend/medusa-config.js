@@ -16,6 +16,14 @@ const hasRedis = !!process.env.REDIS_URL;
 module.exports = defineConfig({
   projectConfig: {
     databaseUrl: process.env.DATABASE_URL,
+    // Explicit connection pool. Medusa leaves poolMax `undefined` by default,
+    // which deadlocks `medusa db:migrate`: the migration-only bootstrap loads
+    // every module on one shared connection and exhausts the pool, so the
+    // process hangs at "Running migrations..." forever. An explicit pool makes
+    // migrations (and the running server) reliable. See DB_POOL_MAX to tune.
+    databaseDriverOptions: {
+      pool: { min: 0, max: Number(process.env.DB_POOL_MAX) || 20 },
+    },
     http: {
       storeCors: process.env.STORE_CORS || "",
       adminCors: process.env.ADMIN_CORS || "",

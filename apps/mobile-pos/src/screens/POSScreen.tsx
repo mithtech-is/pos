@@ -41,7 +41,7 @@ type PaymentMode = "cash" | "upi" | "credit";
  * Mobile billing screen.
  *
  * Mirrors the Electron POSPage feature-for-feature:
- *   - Top: school / class / gender / uniform-type pickers + student info
+ *   - Top: outlet / group / type pickers + customer info
  *   - Scanner card with camera and keyboard (HID) inputs
  *   - Search results / kit suggestion / recent scans
  *   - Cart with line edits + cart-level discount (PIN-gated above 10%)
@@ -96,7 +96,7 @@ export default function POSScreen() {
 
   function openSchoolPicker() {
     setPickerOpen({
-      title: "Select school",
+      title: "Select outlet",
       options: schools.map((s) => ({ id: s.id, label: s.name, sub: s.code })),
       onPick: (id) => {
         cart.setSchool(id || null);
@@ -106,8 +106,8 @@ export default function POSScreen() {
   }
   function openClassPicker() {
     setPickerOpen({
-      title: "Select class",
-      options: classes.map((c) => ({ id: c.id, label: `Class ${c.class_name}` })),
+      title: "Select group",
+      options: classes.map((c) => ({ id: c.id, label: `Group ${c.class_name}` })),
       onPick: (id) => {
         cart.setClass(id || null);
         setPickerOpen(null);
@@ -116,11 +116,11 @@ export default function POSScreen() {
   }
   function openGenderPicker() {
     setPickerOpen({
-      title: "Gender",
+      title: "Option",
       options: [
-        { id: "boy", label: "Boy" },
-        { id: "girl", label: "Girl" },
-        { id: "unisex", label: "Unisex" },
+        { id: "boy", label: "Standard" },
+        { id: "girl", label: "Alternate" },
+        { id: "unisex", label: "Universal" },
       ],
       onPick: (id) => {
         cart.setGender(id as any);
@@ -130,7 +130,7 @@ export default function POSScreen() {
   }
   function openUniformTypePicker() {
     setPickerOpen({
-      title: "Uniform type",
+      title: "Type",
       options: [
         { id: "regular", label: "Regular" },
         { id: "summer", label: "Summer" },
@@ -330,7 +330,7 @@ export default function POSScreen() {
       return;
     }
     if (!cart.school_id) {
-      showToast("error", "Pick a school first");
+      showToast("error", "Pick an outlet first");
       return;
     }
     // If discount over threshold and not approved, force the PIN now.
@@ -463,7 +463,7 @@ export default function POSScreen() {
         schools.find((s) => s.id === cart.school_id)?.name ?? "—";
       const receipt: ReceiptData = {
         distributor_name:
-          (await settings.get<string>("distributor_name")) ?? "Trail Blaze Retail",
+          (await settings.get<string>("distributor_name")) ?? "CounterFlow Store",
         distributor_address:
           (await settings.get<string>("distributor_address")) ?? undefined,
         gstin: (await settings.get<string>("distributor_gstin")) ?? undefined,
@@ -540,44 +540,44 @@ export default function POSScreen() {
       {/* CONTEXT PICKERS */}
       <Panel elev>
         <Title style={{ fontSize: 18 }}>Context</Title>
-        <Muted style={{ marginBottom: 10 }}>Set school, class, gender, uniform type.</Muted>
+        <Muted style={{ marginBottom: 10 }}>Set outlet, group, and type.</Muted>
         <Col gap={8}>
           <MobilePicker
-            label="🏫 School"
+            label="Outlet"
             value={schoolName ?? ""}
-            placeholder="Select school…"
+            placeholder="Select outlet..."
             onPress={openSchoolPicker}
           />
           <MobilePicker
-            label="Class"
-            value={className ? `Class ${className}` : ""}
-            placeholder="Select class…"
+            label="Group"
+            value={className ? `Group ${className}` : ""}
+            placeholder="Select group..."
             disabled={!cart.school_id}
             onPress={openClassPicker}
           />
           <Row gap={8}>
             <View style={{ flex: 1 }}>
               <MobilePicker
-                label="Gender"
+                label="Option"
                 value={prettyGender(cart.gender)}
                 onPress={openGenderPicker}
               />
             </View>
             <View style={{ flex: 1 }}>
               <MobilePicker
-                label="Uniform"
+                label="Type"
                 value={prettyUniform(cart.uniform_type)}
                 onPress={openUniformTypePicker}
               />
             </View>
           </Row>
           <Input
-            label="Student name (optional)"
+            label="Customer name (optional)"
             value={cart.student_name}
             onChangeText={(t) => cart.setStudent(t, cart.parent_mobile)}
           />
           <Input
-            label="Parent mobile"
+            label="Customer mobile"
             value={cart.parent_mobile}
             onChangeText={(t) => cart.setStudent(cart.student_name, t)}
             keyboardType="phone-pad"
@@ -639,7 +639,7 @@ export default function POSScreen() {
         <Input
           value={search}
           onChangeText={setSearch}
-          placeholder="e.g. shirt, JHH-WSH-32, 890000…"
+          placeholder="e.g. item, SKU-001, 890000..."
           autoCapitalize="none"
         />
         {search.length > 0 && results.length === 0 && (
@@ -1039,11 +1039,11 @@ function prettyGender(g: string | null | undefined): string {
   if (!g) return "";
   switch (g) {
     case "boy":
-      return "Boy";
+      return "Standard";
     case "girl":
-      return "Girl";
+      return "Alternate";
     case "unisex":
-      return "Unisex";
+      return "Universal";
     default:
       return g;
   }

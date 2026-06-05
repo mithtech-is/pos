@@ -16,7 +16,7 @@ import { useAuthStore } from "../state/auth";
 const LINKS: { name: string; label: string; emoji: string; description: string }[] = [
   { name: "Transactions", label: "Transactions", emoji: "💹", description: "Live sales dashboard" },
   { name: "Returns", label: "Returns", emoji: "↩️", description: "Refund or exchange items" },
-  { name: "Bulk", label: "Bulk school order", emoji: "📦", description: "Paste CSV → many orders" },
+  { name: "Bulk", label: "Bulk order", emoji: "📦", description: "Paste CSV -> many orders" },
   { name: "Closing", label: "Cash closing", emoji: "🔐", description: "End-of-day reconciliation" },
   { name: "Pending", label: "Pending sync", emoji: "⏳", description: "Orders waiting to upload" },
   { name: "Sync", label: "Sync status", emoji: "📡", description: "Pull / push state" },

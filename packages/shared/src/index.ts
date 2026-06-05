@@ -7,6 +7,7 @@ export * from "./types/device";
 export * from "./types/user";
 export * from "./types/inventory";
 export * from "./types/receipt";
+export * from "./types/promotion";
 export * from "./types/api";
 export * from "./constants";
 export * from "./utils";

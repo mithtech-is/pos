@@ -29,3 +29,8 @@ Thumbs.db
 
 # Electron
 release/
+
+# Mobile bundle temp + local DB backups / scratch
+**/.bundle-tmp/
+backup-*.sql
+backup-*.txt

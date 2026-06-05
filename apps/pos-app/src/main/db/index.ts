@@ -70,7 +70,6 @@ export const repositories = {
  */
 export function registerDatabaseHandlers(ipc: IpcMain) {
   ipc.handle("db:tables", () => TABLES);
-
   // Master data ----------------------------------------------------------
   ipc.handle("db:listSchools", () => repositories.masterData().listSchools());
   ipc.handle("db:listClasses", (_e, schoolId: string) =>

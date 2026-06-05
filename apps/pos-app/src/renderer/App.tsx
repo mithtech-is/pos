@@ -3,6 +3,10 @@ import { Routes, Route, NavLink, Navigate, useLocation } from "react-router-dom"
 import LoginPage from "./pages/LoginPage";
 import POSPage from "./pages/POSPage";
 import ProductsPage from "./pages/ProductsPage";
+import AddProductPage from "./pages/AddProductPage";
+import CustomersPage from "./pages/CustomersPage";
+import PromotionsPage from "./pages/PromotionsPage";
+import InventoryPage from "./pages/InventoryPage";
 import OrdersPage from "./pages/OrdersPage";
 import PendingOrdersPage from "./pages/PendingOrdersPage";
 import SyncPage from "./pages/SyncPage";
@@ -17,24 +21,7 @@ import SyncStatusBadge from "./components/SyncStatusBadge";
 import { useAuthStore } from "./state/auth";
 import { useThemeStore } from "./state/theme";
 
-/**
- * App shell — Polemarch unlisted-shares dealer POS.
- *
- * The underlying offline-first machinery (SQLite + sync queue + idempotency
- * keys) is the same as it was when this app was a school-uniform POS — the
- * concepts are just relabelled in the UI:
- *
- *   schools/products → company listings (issuer + ISIN)
- *   orders           → trades
- *   cart             → trade ticket
- *   returns          → trade reversals
- *   bulk order       → bulk trade upload
- *   cash closing     → end-of-day reconciliation
- *   cashier/manager  → dealer / compliance officer
- *
- * Routes use the new domain names; the legacy URLs (/pos, /products, etc.)
- * are kept so deep links and the existing IPC code keep working.
- */
+/** App shell for the standalone offline-first POS terminal. */
 export default function App() {
   const user = useAuthStore((s) => s.user);
   const location = useLocation();
@@ -51,24 +38,28 @@ export default function App() {
   return (
     <div className="layout">
       <header className="topbar">
-        <strong>Polemarch</strong>
-        <span className="muted">Unlisted Shares · v0.3.0</span>
+        <strong>CounterFlow POS</strong>
+        <span className="muted">Standalone terminal · v0.4.0</span>
         <SyncStatusBadge />
         <nav className="nav">
           {user && (
             <>
-              <NavLink to="/products" className={({ isActive }) => (isActive ? "active" : "")}>Listings</NavLink>
-              <NavLink to="/pos" className={({ isActive }) => (isActive ? "active" : "")}>Trade Ticket</NavLink>
-              <NavLink to="/transactions" className={({ isActive }) => (isActive ? "active" : "")}>Dashboard</NavLink>
-              <NavLink to="/orders" className={({ isActive }) => (isActive ? "active" : "")}>Trades</NavLink>
-              <NavLink to="/offline-trades" className={({ isActive }) => (isActive ? "active" : "")}>Offline Trades</NavLink>
-              <NavLink to="/returns" className={({ isActive }) => (isActive ? "active" : "")}>Reversals</NavLink>
-              <NavLink to="/bulk" className={({ isActive }) => (isActive ? "active" : "")}>Bulk Upload</NavLink>
-              <NavLink to="/closing" className={({ isActive }) => (isActive ? "active" : "")}>EOD</NavLink>
-              <NavLink to="/pending" className={({ isActive }) => (isActive ? "active" : "")}>Pending Sync</NavLink>
-              <NavLink to="/sync" className={({ isActive }) => (isActive ? "active" : "")}>Sync</NavLink>
-              <NavLink to="/conflicts" className={({ isActive }) => (isActive ? "active" : "")}>Conflicts</NavLink>
-              <NavLink to="/settings" className={({ isActive }) => (isActive ? "active" : "")}>Settings</NavLink>
+              <NavLink to="/products" className={navClass}>Catalog</NavLink>
+              <NavLink to="/add-product" className={navClass}>Add Product</NavLink>
+              <NavLink to="/pos" className={navClass}>Checkout</NavLink>
+              <NavLink to="/transactions" className={navClass}>Dashboard</NavLink>
+              <NavLink to="/customers" className={navClass}>Customers</NavLink>
+              <NavLink to="/promotions" className={navClass}>Promotions</NavLink>
+              <NavLink to="/inventory" className={navClass}>Inventory</NavLink>
+              <NavLink to="/orders" className={navClass}>Orders</NavLink>
+              <NavLink to="/offline-trades" className={navClass}>Offline Orders</NavLink>
+              <NavLink to="/returns" className={navClass}>Returns</NavLink>
+              <NavLink to="/bulk" className={navClass}>Bulk Upload</NavLink>
+              <NavLink to="/closing" className={navClass}>EOD</NavLink>
+              <NavLink to="/pending" className={navClass}>Pending Sync</NavLink>
+              <NavLink to="/sync" className={navClass}>Sync</NavLink>
+              <NavLink to="/conflicts" className={navClass}>Conflicts</NavLink>
+              <NavLink to="/settings" className={navClass}>Settings</NavLink>
             </>
           )}
         </nav>
@@ -77,8 +68,12 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/products" element={<ProductsPage />} />
+        <Route path="/add-product" element={<AddProductPage />} />
         <Route path="/pos" element={<POSPage />} />
         <Route path="/transactions" element={<TransactionsPage />} />
+        <Route path="/customers" element={<CustomersPage />} />
+        <Route path="/promotions" element={<PromotionsPage />} />
+        <Route path="/inventory" element={<InventoryPage />} />
         <Route path="/orders" element={<OrdersPage />} />
         <Route path="/offline-trades" element={<OfflineTradesPage />} />
         <Route path="/returns" element={<ReturnsPage />} />
@@ -94,8 +89,12 @@ export default function App() {
   );
 }
 
+function navClass({ isActive }: { isActive: boolean }): string {
+  return isActive ? "active" : "";
+}
+
 function prettyRole(role: string): string {
-  if (role === "manager") return "Compliance Officer";
-  if (role === "cashier") return "Dealer";
+  if (role === "manager") return "Manager";
+  if (role === "cashier") return "Cashier";
   return role;
 }

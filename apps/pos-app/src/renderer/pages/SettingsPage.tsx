@@ -2,14 +2,7 @@ import { useEffect, useState } from "react";
 import { useThemeStore, type ThemePreference } from "../state/theme";
 import { useAuthStore } from "../state/auth";
 
-/**
- * Settings — broker / dealer terminal configuration.
- *
- * Underlying storage keys are unchanged (distributor_name, distributor_address,
- * etc.) so the existing sync + receipt code continues to work; only the
- * labels and copy are rebranded to Polemarch / unlisted-shares context. SEBI
- * registration is a new optional field stored under its own key.
- */
+/** Settings for terminal, account, payments, appearance, and local data. */
 export default function SettingsPage() {
   const themePref = useThemeStore((s) => s.preference);
   const setThemePref = useThemeStore((s) => s.setPreference);
@@ -17,15 +10,19 @@ export default function SettingsPage() {
   const [backendUrl, setBackendUrl] = useState("");
   const [deviceCode, setDeviceCode] = useState("");
   const [deviceToken, setDeviceToken] = useState("");
-  const [brokerName, setBrokerName] = useState("");
-  const [brokerAddress, setBrokerAddress] = useState("");
-  const [brokerGstin, setBrokerGstin] = useState("");
+  const [businessName, setBusinessName] = useState("");
+  const [businessAddress, setBusinessAddress] = useState("");
+  const [businessGstin, setBusinessGstin] = useState("");
   const [sebiReg, setSebiReg] = useState("");
   const [bankUpiVpa, setBankUpiVpa] = useState("");
   const [bankPayee, setBankPayee] = useState("");
   const [bankNeftAccount, setBankNeftAccount] = useState("");
   const [bankIfsc, setBankIfsc] = useState("");
   const [allowNegativeStock, setAllowNegativeStock] = useState(false);
+  const [gstRate, setGstRate] = useState("0");
+  const [priceIncludesTax, setPriceIncludesTax] = useState(false);
+  const [hsnCode, setHsnCode] = useState("");
+  const [loyaltyRate, setLoyaltyRate] = useState("100");
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
@@ -33,24 +30,32 @@ export default function SettingsPage() {
       setBackendUrl(((await window.pos.getSetting("backend_url")) as string) ?? "http://localhost:9000");
       setDeviceCode(((await window.pos.getSetting("device_code")) as string) ?? "POS001");
       setDeviceToken(((await window.pos.getSetting("device_token")) as string) ?? "");
-      setBrokerName(
+      setBusinessName(
         ((await window.pos.getSetting("distributor_name")) as string) ??
-          "Polemarch Securities Pvt Ltd",
+          "CounterFlow Store",
       );
-      setBrokerAddress(
+      setBusinessAddress(
         ((await window.pos.getSetting("distributor_address")) as string) ??
-          "BKC, Bandra East, Mumbai 400051",
+          "Main branch",
       );
-      setBrokerGstin(((await window.pos.getSetting("distributor_gstin")) as string) ?? "");
+      setBusinessGstin(((await window.pos.getSetting("distributor_gstin")) as string) ?? "");
       setSebiReg(((await window.pos.getSetting("sebi_registration")) as string) ?? "");
       setBankUpiVpa(((await window.pos.getSetting("upi_vpa")) as string) ?? "");
       setBankPayee(
-        ((await window.pos.getSetting("upi_payee_name")) as string) ?? "Polemarch Securities",
+        ((await window.pos.getSetting("upi_payee_name")) as string) ?? "CounterFlow Store",
       );
       setBankNeftAccount(((await window.pos.getSetting("neft_account")) as string) ?? "");
       setBankIfsc(((await window.pos.getSetting("neft_ifsc")) as string) ?? "");
       setAllowNegativeStock(
         ((await window.pos.getSetting("allow_negative_stock")) as boolean) ?? false,
+      );
+      setGstRate(String(((await window.pos.getSetting("gst_rate")) as number) ?? 0));
+      setPriceIncludesTax(
+        ((await window.pos.getSetting("price_includes_tax")) as boolean) ?? false,
+      );
+      setHsnCode(((await window.pos.getSetting("hsn_code")) as string) ?? "");
+      setLoyaltyRate(
+        String(((await window.pos.getSetting("loyalty_rupees_per_point")) as number) ?? 100),
       );
     })().catch(() => {});
   }, []);
@@ -59,9 +64,9 @@ export default function SettingsPage() {
     await window.pos.setBackendUrl(backendUrl);
     await window.pos.setDeviceCode(deviceCode);
     await window.pos.setDeviceToken(deviceToken);
-    await window.pos.setSetting({ key: "distributor_name", value: brokerName });
-    await window.pos.setSetting({ key: "distributor_address", value: brokerAddress });
-    await window.pos.setSetting({ key: "distributor_gstin", value: brokerGstin });
+    await window.pos.setSetting({ key: "distributor_name", value: businessName });
+    await window.pos.setSetting({ key: "distributor_address", value: businessAddress });
+    await window.pos.setSetting({ key: "distributor_gstin", value: businessGstin });
     await window.pos.setSetting({ key: "sebi_registration", value: sebiReg });
     await window.pos.setSetting({ key: "upi_vpa", value: bankUpiVpa });
     await window.pos.setSetting({ key: "upi_payee_name", value: bankPayee });
@@ -70,6 +75,13 @@ export default function SettingsPage() {
     await window.pos.setSetting({
       key: "allow_negative_stock",
       value: allowNegativeStock,
+    });
+    await window.pos.setSetting({ key: "gst_rate", value: Number(gstRate) || 0 });
+    await window.pos.setSetting({ key: "price_includes_tax", value: priceIncludesTax });
+    await window.pos.setSetting({ key: "hsn_code", value: hsnCode });
+    await window.pos.setSetting({
+      key: "loyalty_rupees_per_point",
+      value: Number(loyaltyRate) || 100,
     });
     setSaved(true);
     setTimeout(() => setSaved(false), 1500);
@@ -116,7 +128,7 @@ export default function SettingsPage() {
           <div>
             <label>Terminal code</label>
             <input value={deviceCode} onChange={(e) => setDeviceCode(e.target.value)} />
-            <div className="muted">Unique ID for this trading terminal.</div>
+            <div className="muted">Unique ID for this POS terminal.</div>
           </div>
           <div>
             <label>Terminal registration token</label>
@@ -130,53 +142,103 @@ export default function SettingsPage() {
               onChange={(e) => setAllowNegativeStock(e.target.checked)}
               style={{ width: "auto" }}
             />
-            Allow trade even when book inventory is insufficient (short sell)
+            Allow checkout even when local inventory is insufficient
           </label>
         </div>
       </div>
 
       <div className="panel elev">
-        <h2 style={{ marginTop: 0 }}>🏢 Broker identity</h2>
+        <h2 style={{ marginTop: 0 }}>Business identity</h2>
         <div className="col">
           <div>
-            <label>Broker name</label>
-            <input value={brokerName} onChange={(e) => setBrokerName(e.target.value)} />
+            <label>Business name</label>
+            <input value={businessName} onChange={(e) => setBusinessName(e.target.value)} />
           </div>
           <div>
-            <label>Registered office</label>
+            <label>Address</label>
             <textarea
               rows={2}
-              value={brokerAddress}
-              onChange={(e) => setBrokerAddress(e.target.value)}
+              value={businessAddress}
+              onChange={(e) => setBusinessAddress(e.target.value)}
             />
           </div>
           <div className="row">
             <div className="flex-1">
               <label>GSTIN</label>
               <input
-                value={brokerGstin}
-                onChange={(e) => setBrokerGstin(e.target.value)}
+                value={businessGstin}
+                onChange={(e) => setBusinessGstin(e.target.value)}
                 placeholder="27AAAAA0000A1Z5"
               />
             </div>
             <div className="flex-1">
-              <label>SEBI Reg #</label>
+              <label>Registration #</label>
               <input
                 value={sebiReg}
                 onChange={(e) => setSebiReg(e.target.value)}
-                placeholder="INZ000123456"
+                placeholder="REG-001"
               />
             </div>
           </div>
         </div>
       </div>
 
+      <div className="panel elev">
+        <h2 style={{ marginTop: 0 }}>Tax / GST</h2>
+        <div className="col">
+          <div className="row">
+            <div className="flex-1">
+              <label>GST rate (%)</label>
+              <input
+                type="number"
+                min={0}
+                step={0.5}
+                value={gstRate}
+                onChange={(e) => setGstRate(e.target.value)}
+                placeholder="18"
+              />
+              <div className="muted">Split equally into CGST + SGST on the invoice. 0 = no tax.</div>
+            </div>
+            <div className="flex-1">
+              <label>Default HSN / SAC code</label>
+              <input value={hsnCode} onChange={(e) => setHsnCode(e.target.value)} placeholder="6109" />
+            </div>
+          </div>
+          <label style={{ display: "flex", alignItems: "center", gap: 8, textTransform: "none" }}>
+            <input
+              type="checkbox"
+              checked={priceIncludesTax}
+              onChange={(e) => setPriceIncludesTax(e.target.checked)}
+              style={{ width: "auto" }}
+            />
+            Prices already include GST (MRP) — tax is backed out of the price
+          </label>
+        </div>
+      </div>
+
+      <div className="panel elev">
+        <h2 style={{ marginTop: 0 }}>Loyalty</h2>
+        <div className="col">
+          <div>
+            <label>Earn rate — ₹ spent per point</label>
+            <input
+              type="number"
+              min={1}
+              value={loyaltyRate}
+              onChange={(e) => setLoyaltyRate(e.target.value)}
+              placeholder="100"
+            />
+            <div className="muted">
+              e.g. 100 → 1 point per ₹100 spent. Points redeem at ₹1 each at checkout.
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="panel elev" style={{ gridColumn: "1 / -1" }}>
-        <h2 style={{ marginTop: 0 }}>💸 Settlement instructions</h2>
+        <h2 style={{ marginTop: 0 }}>Payment instructions</h2>
         <div className="muted" style={{ marginBottom: 12 }}>
-          Used on contract notes + the UPI QR shown to clients at checkout.
-          These details are read-only for the dealer — only Compliance can
-          change them here.
+          Used on receipts and the UPI QR shown to customers at checkout.
         </div>
         <div className="row" style={{ alignItems: "flex-start" }}>
           <div className="flex-1">
@@ -184,16 +246,16 @@ export default function SettingsPage() {
             <input
               value={bankUpiVpa}
               onChange={(e) => setBankUpiVpa(e.target.value)}
-              placeholder="polemarch@hdfcbank"
+              placeholder="counterflow@bank"
             />
-            <div className="muted">For instant client payments. Test with a small trade first.</div>
+            <div className="muted">For instant customer payments. Test with a small order first.</div>
           </div>
           <div className="flex-1">
-            <label>Payee name (shown in client's UPI app)</label>
+            <label>Payee name (shown in customer's UPI app)</label>
             <input
               value={bankPayee}
               onChange={(e) => setBankPayee(e.target.value)}
-              placeholder="Polemarch Securities"
+              placeholder="CounterFlow Store"
             />
           </div>
         </div>

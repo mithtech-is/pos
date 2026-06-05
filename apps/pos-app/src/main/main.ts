@@ -18,8 +18,8 @@ async function createWindow() {
     height: 820,
     minWidth: 1024,
     minHeight: 720,
-    title: "School Uniform POS",
-    backgroundColor: "#0f172a",
+    title: "CounterFlow POS",
+    backgroundColor: "#0e0e0e",
     autoHideMenuBar: true,
     webPreferences: {
       preload: preloadPath,

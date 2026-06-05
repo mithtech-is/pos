@@ -31,6 +31,16 @@ interface CartState {
   removeLine: (variantId: string) => void;
   applyDiscount: (variantId: string, amount: number) => void;
   reset: () => void;
+  /** Replace the whole cart (context + lines) — used to resume a parked sale. */
+  loadCart: (payload: {
+    school_id: string | null;
+    class_id: string | null;
+    gender: "boy" | "girl" | "unisex";
+    uniform_type: string;
+    student_name: string;
+    parent_mobile: string;
+    lines: CartLine[];
+  }) => void;
 
   totals: () => {
     subtotal: number;
@@ -90,6 +100,7 @@ export const useCartStore = create<CartState>((set, get) => ({
       ),
     })),
   reset: () => set(initial),
+  loadCart: (payload) => set({ ...payload }),
 
   totals: () => {
     const lines = get().lines;

@@ -150,8 +150,7 @@ export default function ProductsScreen() {
                 {item.name}
               </Text>
               <Text variant="caption" tone="muted" style={{ marginTop: 2 }}>
-                {item.variant_count} {item.variant_count === 1 ? "size" : "sizes"}
-                {item.school_name ? ` · ${item.school_name}` : ""}
+                {item.variant_count} {item.variant_count === 1 ? "variant" : "variants"}
               </Text>
               <Text variant="bodyStrong" style={{ marginTop: 6 }}>
                 {priceLabel(item)}

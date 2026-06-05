@@ -36,9 +36,9 @@ export function buildReceiptHtml(r: ReceiptData): string {
   ${r.server_order_number ? `<div>Server Order No: ${escape(r.server_order_number)}</div>` : ""}
   <div>Date: ${escape(r.date_time)}</div>
   <div>Cashier: ${escape(r.cashier_name)}</div>
-  <div>School: ${escape(r.school_name)}</div>
-  ${r.student_name ? `<div>Student: ${escape(r.student_name)}</div>` : ""}
-  ${r.parent_mobile ? `<div>Parent: ${escape(r.parent_mobile)}</div>` : ""}
+  <div>Outlet: ${escape(r.school_name)}</div>
+  ${r.student_name ? `<div>Customer: ${escape(r.student_name)}</div>` : ""}
+  ${r.parent_mobile ? `<div>Mobile: ${escape(r.parent_mobile)}</div>` : ""}
   <hr/>
   <table>
     <thead><tr><th>Item</th><th>Qty</th><th class="right">Total</th></tr></thead>
@@ -88,7 +88,7 @@ export async function printReceipt(receipt: ReceiptData): Promise<void> {
 /**
  * Render to a PDF file and pop the share sheet — handy when there's no
  * printer set up, so the cashier can WhatsApp / email the receipt to the
- * parent in seconds.
+ * customer in seconds.
  */
 export async function shareReceiptPdf(receipt: ReceiptData): Promise<void> {
   const html = buildReceiptHtml(receipt);

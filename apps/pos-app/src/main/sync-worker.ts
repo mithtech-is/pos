@@ -268,6 +268,151 @@ export function registerSyncHandlers(ipc: IpcMain) {
   ipc.handle("sync:onlineStatus", () => ({ online: state.online }));
 
   /**
+   * Scan-to-add: create a catalog product on the backend from a scanned
+   * barcode + name + price, then immediately pull so the new product lands in
+   * the local index and is scannable for billing. Requires the device to be
+   * online (product creation is not queued offline).
+   */
+  ipc.handle(
+    "pos:createProduct",
+    async (
+      _e,
+      payload: { barcode: string; name: string; price: number; category?: string },
+    ) => {
+      if (!payload?.barcode || !payload?.name || !(Number(payload.price) > 0)) {
+        return { ok: false, error: "barcode, name and a positive price are required" };
+      }
+      try {
+        const r = await fetchJson("/pos/products", {
+          method: "POST",
+          body: JSON.stringify({
+            barcode: payload.barcode,
+            name: payload.name,
+            price: Number(payload.price),
+            category: payload.category,
+          }),
+        });
+        const data = r.data ?? r;
+        // Refresh the local catalog so the new barcode is scannable right away.
+        await tick();
+        return { ok: true, data };
+      } catch (err) {
+        return { ok: false, error: (err as Error).message };
+      }
+    },
+  );
+
+  /**
+   * Loyalty / CRM. Online-only and best-effort: a failed lookup or award must
+   * never block a sale (billing stays fully offline-capable).
+   */
+  ipc.handle("pos:lookupCustomer", async (_e, phone: string) => {
+    try {
+      const r = await fetchJson(`/pos/customers?phone=${encodeURIComponent(phone)}`);
+      return { ok: true, data: r.data ?? r };
+    } catch (err) {
+      return { ok: false, error: (err as Error).message };
+    }
+  });
+
+  ipc.handle(
+    "pos:awardPoints",
+    async (
+      _e,
+      payload: {
+        phone: string;
+        name?: string;
+        spent: number;
+        redeem_points?: number;
+        earn_rupees_per_point?: number;
+      },
+    ) => {
+      try {
+        const r = await fetchJson("/pos/customers/points", {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
+        return { ok: true, data: r.data ?? r };
+      } catch (err) {
+        return { ok: false, error: (err as Error).message };
+      }
+    },
+  );
+
+  /**
+   * Promotions. Fetched from the backend and cached locally so the cashier can
+   * still apply a known coupon while offline.
+   */
+  ipc.handle("pos:listPromotions", async () => {
+    try {
+      const r = await fetchJson("/pos/promotions");
+      const data = r.data ?? r;
+      repositories.settings().set("promotions_cache", data);
+      return { ok: true, data, source: "online" };
+    } catch {
+      const cached = repositories.settings().get<any[]>("promotions_cache") ?? [];
+      return { ok: true, data: cached, source: "cache" };
+    }
+  });
+
+  ipc.handle("pos:savePromotion", async (_e, promo: any) => {
+    try {
+      const r = await fetchJson("/pos/promotions", {
+        method: "POST",
+        body: JSON.stringify(promo),
+      });
+      const data = r.data ?? r;
+      repositories.settings().set("promotions_cache", data);
+      return { ok: true, data };
+    } catch (err) {
+      return { ok: false, error: (err as Error).message };
+    }
+  });
+
+  ipc.handle("pos:deletePromotion", async (_e, id: string) => {
+    try {
+      const r = await fetchJson(`/pos/promotions/${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      });
+      const data = r.data ?? r;
+      repositories.settings().set("promotions_cache", data);
+      return { ok: true, data };
+    } catch (err) {
+      return { ok: false, error: (err as Error).message };
+    }
+  });
+
+  /**
+   * Inventory / suppliers / purchase orders — back-office, online-only.
+   */
+  const call = async (path: string, init?: any) => {
+    try {
+      const r = await fetchJson(path, init);
+      return { ok: true, data: r.data ?? r };
+    } catch (err) {
+      return { ok: false, error: (err as Error).message };
+    }
+  };
+  ipc.handle("pos:listInventory", () => call("/pos/inventory"));
+  ipc.handle("pos:updateInventory", (_e, body: any) =>
+    call("/pos/inventory", { method: "POST", body: JSON.stringify(body) }),
+  );
+  ipc.handle("pos:listSuppliers", () => call("/pos/suppliers"));
+  ipc.handle("pos:saveSupplier", (_e, body: any) =>
+    call("/pos/suppliers", { method: "POST", body: JSON.stringify(body) }),
+  );
+  ipc.handle("pos:deleteSupplier", (_e, id: string) =>
+    call(`/pos/suppliers/${encodeURIComponent(id)}`, { method: "DELETE" }),
+  );
+  ipc.handle("pos:listPurchaseOrders", () => call("/pos/purchase-orders"));
+  ipc.handle("pos:savePurchaseOrder", (_e, body: any) =>
+    call("/pos/purchase-orders", { method: "POST", body: JSON.stringify(body) }),
+  );
+  ipc.handle("pos:receivePurchaseOrder", (_e, id: string) =>
+    call(`/pos/purchase-orders/${encodeURIComponent(id)}/receive`, { method: "POST" }),
+  );
+
+  /**
    * Verify a manager PIN for a sensitive action. Tries the backend first; if
    * the device is offline we fall back to the locally-cached manager_pin_hashes
    * (last hydrated during pull sync).

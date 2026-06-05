@@ -9,7 +9,7 @@ type ReturnReason =
   | "defective_item"
   | "wrong_product"
   | "duplicate_purchase"
-  | "school_change"
+  | "customer_request"
   | "other";
 
 const REASON_LABELS: Record<ReturnReason, string> = {
@@ -17,7 +17,7 @@ const REASON_LABELS: Record<ReturnReason, string> = {
   defective_item: "Defective item",
   wrong_product: "Wrong product",
   duplicate_purchase: "Duplicate purchase",
-  school_change: "School change",
+  customer_request: "Customer request",
   other: "Other",
 };
 
@@ -49,7 +49,7 @@ interface OrderRow {
  * Returns + exchanges screen.
  *
  * Flow:
- *   1. Search for an order by local order number or parent mobile.
+ *   1. Search for an order by local order number or customer mobile.
  *   2. Pick which lines to return + quantity + reason per line.
  *   3. Pick refund mode (cash / store credit).
  *   4. Manager PIN gate (required for any return per spec § 5.1.3 FR-013).
@@ -205,7 +205,7 @@ export default function ReturnsPage() {
       <div className="panel">
         <h2 style={{ marginTop: 0 }}>Find order</h2>
         <input
-          placeholder="Local # or parent mobile"
+          placeholder="Local # or customer mobile"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => {
@@ -253,7 +253,7 @@ export default function ReturnsPage() {
         ) : (
           <>
             <div className="muted">
-              Order: <b>{selectedOrder.local_order_number}</b> · Student:{" "}
+              Order: <b>{selectedOrder.local_order_number}</b> · Customer:{" "}
               {selectedOrder.student_name ?? "—"} · Mobile:{" "}
               {selectedOrder.parent_mobile ?? "—"}
             </div>
@@ -348,7 +348,7 @@ export default function ReturnsPage() {
               </button>
             </div>
             {message && (
-              <div style={{ marginTop: 10, color: "var(--accent-2)" }}>
+              <div style={{ marginTop: 10, color: "var(--text-soft)" }}>
                 {message}
               </div>
             )}

@@ -3,23 +3,23 @@
  * CSS variables so the two clients feel like the same product.
  */
 export const colors = {
-  bg: "#0b1120",
-  bgElev1: "#131c30",
-  bgElev2: "#1c2a44",
-  panel: "#131c30",
-  panel2: "#1c2a44",
+  bg: "#0e0e0e",
+  bgElev1: "#171717",
+  bgElev2: "#1f1f1f",
+  panel: "#171717",
+  panel2: "#1f1f1f",
 
-  text: "#f8fafc",
-  textSoft: "#cbd5e1",
-  muted: "#94a3b8",
-  muted2: "#64748b",
+  text: "#f5f5f5",
+  textSoft: "#d4d4d4",
+  muted: "#a3a3a3",
+  muted2: "#737373",
 
-  border: "#2c3a55",
-  borderStrong: "#3b4a6a",
+  border: "#2a2a2a",
+  borderStrong: "#3a3a3a",
 
-  accent: "#6366f1",
-  accentHover: "#818cf8",
-  accentSoft: "rgba(99, 102, 241, 0.12)",
+  accent: "#fafafa",
+  accentHover: "#ffffff",
+  accentSoft: "rgba(250, 250, 250, 0.12)",
 
   success: "#22c55e",
   successSoft: "rgba(34, 197, 94, 0.18)",
@@ -27,8 +27,8 @@ export const colors = {
   warningSoft: "rgba(245, 158, 11, 0.18)",
   danger: "#ef4444",
   dangerSoft: "rgba(239, 68, 68, 0.18)",
-  info: "#06b6d4",
-  infoSoft: "rgba(6, 182, 212, 0.18)",
+  info: "#d4d4d4",
+  infoSoft: "rgba(212, 212, 212, 0.16)",
 };
 
 export const radius = {

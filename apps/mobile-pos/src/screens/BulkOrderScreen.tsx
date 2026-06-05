@@ -22,10 +22,10 @@ import {
   syncQueue,
 } from "../db/repositories";
 
-const SAMPLE = `student_name,class,gender,uniform_type,parent_mobile,shirt_size,pant_size
-Aarav Shah,1,boy,regular,9876543210,28,28
-Priya Iyer,2,girl,regular,9000000111,24,
-Rohit Kumar,1,boy,regular,9000000222,30,30`;
+const SAMPLE = `customer_name,group,option,type,customer_mobile,top_size,bottom_size
+Customer One,Default,standard,regular,9876543210,M,32
+Customer Two,Default,alternate,regular,9000000111,S,
+Customer Three,Default,standard,regular,9000000222,L,34`;
 
 type Row = {
   student_name: string;
@@ -46,18 +46,37 @@ function parseCsv(text: string): Row[] {
   if (lines.length === 0) return [];
   const headers = lines[0].split(",").map((h) => h.trim().toLowerCase());
   const idx = (k: string) => headers.indexOf(k);
+  const pick = (cols: string[], ...keys: string[]) => {
+    for (const key of keys) {
+      const i = idx(key);
+      if (i >= 0 && cols[i]) return cols[i];
+    }
+    return "";
+  };
+  const optionToGender = (value: string): Row["gender"] => {
+    const v = value.toLowerCase();
+    if (v === "alternate" || v === "girl") return "girl";
+    if (v === "universal" || v === "unisex") return "unisex";
+    return "boy";
+  };
   return lines.slice(1).map((line) => {
     const cols = line.split(",").map((c) => c.trim());
     return {
-      student_name: cols[idx("student_name")] ?? "",
-      class: cols[idx("class")] ?? "",
-      gender: (cols[idx("gender")] ?? "boy") as Row["gender"],
-      uniform_type: cols[idx("uniform_type")] ?? "regular",
-      parent_mobile: cols[idx("parent_mobile")] || undefined,
-      shirt_size: cols[idx("shirt_size")] || undefined,
-      pant_size: cols[idx("pant_size")] || undefined,
+      student_name: pick(cols, "customer_name", "student_name"),
+      class: pick(cols, "group", "class"),
+      gender: optionToGender(pick(cols, "option", "gender")),
+      uniform_type: pick(cols, "type", "uniform_type") || "regular",
+      parent_mobile: pick(cols, "customer_mobile", "parent_mobile") || undefined,
+      shirt_size: pick(cols, "top_size", "shirt_size") || undefined,
+      pant_size: pick(cols, "bottom_size", "pant_size") || undefined,
     };
   });
+}
+
+function optionLabel(value: Row["gender"]): string {
+  if (value === "girl") return "Alternate";
+  if (value === "unisex") return "Universal";
+  return "Standard";
 }
 
 export default function BulkOrderScreen() {
@@ -82,10 +101,10 @@ export default function BulkOrderScreen() {
   }, []);
 
   async function resolveRow(row: Row): Promise<Row> {
-    if (!schoolId) return { ...row, status: "error", message: "Pick a school first" };
+    if (!schoolId) return { ...row, status: "error", message: "Pick an outlet first" };
     const classes = classesBySchool[schoolId] ?? [];
     const cls = classes.find((c) => c.class_name === row.class);
-    if (!cls) return { ...row, status: "error", message: `Class ${row.class} not found` };
+    if (!cls) return { ...row, status: "error", message: `Group ${row.class} not found` };
     const kitInfo = await masterData.findKitByContext({
       school_id: schoolId,
       class_id: cls.id,
@@ -96,7 +115,7 @@ export default function BulkOrderScreen() {
       return {
         ...row,
         status: "error",
-        message: `No kit for class ${row.class} ${row.gender} ${row.uniform_type}`,
+        message: `No bundle for group ${row.class} ${optionLabel(row.gender)} ${row.uniform_type}`,
       };
     }
     const preview: Row["preview"] = [];
@@ -141,7 +160,7 @@ export default function BulkOrderScreen() {
 
   async function previewAll() {
     if (!schoolId) {
-      setMessage("Pick a school");
+      setMessage("Pick an outlet");
       return;
     }
     setBusy(true);
@@ -255,16 +274,16 @@ export default function BulkOrderScreen() {
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.scrollPad}>
-      <Title>📦 Bulk school order</Title>
+      <Title>📦 Bulk order</Title>
       <Muted style={{ marginTop: 6, marginBottom: 12 }}>
-        Paste CSV with headers: student_name, class, gender, uniform_type,
-        parent_mobile, shirt_size, pant_size. Each row becomes one queued
+        Paste CSV with headers: customer_name, group, option, type,
+        customer_mobile, top_size, bottom_size. Each row becomes one queued
         offline order.
       </Muted>
 
       <Panel elev>
         <Text style={{ color: colors.muted, fontSize: 11, marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>
-          School
+          Outlet
         </Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
           {schools.map((s) => (
@@ -349,7 +368,7 @@ export default function BulkOrderScreen() {
             >
               <Row style={{ justifyContent: "space-between" }}>
                 <Text style={{ color: colors.text, fontWeight: "500" }}>
-                  {r.student_name} — class {r.class} {r.gender}
+                  {r.student_name} - group {r.class} {optionLabel(r.gender)}
                 </Text>
                 <Badge
                   variant={

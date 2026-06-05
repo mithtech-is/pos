@@ -1,22 +1,18 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { buildIdempotencyKey } from "@pos/shared";
 import { useAuthStore } from "../state/auth";
 
 /**
- * Bulk school order — the "back-to-school" workflow.
+ * Bulk order upload.
  *
- * School hands the distributor a sheet of all students with their sizes; the
- * distributor pastes it here. The screen parses, looks up the school's kit
- * for each (class, gender, uniform_type), substitutes the right variant per
- * size, and turns each row into a queued offline order. 200 students get
- * processed in ~3 seconds entirely offline.
+ * Paste a CSV, preview the configured bundle for each row, and create queued offline orders.
  *
  * CSV columns (header row required):
- *   student_name,class,gender,uniform_type,parent_mobile,shirt_size,pant_size
+ *   customer_name,group,option,type,customer_mobile,top_size,bottom_size
  *
  * Example:
- *   Aarav Shah,1,boy,regular,9876543210,28,28
- *   Priya Iyer,2,girl,regular,9000000111,24,
+ *   Customer One,Default,standard,regular,9876543210,M,32
+ *   Customer Two,Default,alternate,regular,9000000111,S,
  *
  * The parser is lenient about missing columns; unknown sizes fall back to the
  * kit's default variant. Failed rows are flagged for the cashier to fix
@@ -28,7 +24,7 @@ type Row = {
   class: string;
   gender: "boy" | "girl" | "unisex";
   uniform_type: string;
-  parent_mobile?: string;
+  customer_mobile?: string;
   shirt_size?: string;
   pant_size?: string;
   status?: "ready" | "warning" | "error";
@@ -38,28 +34,47 @@ type Row = {
   preview_total?: number;
 };
 
-const SAMPLE = `student_name,class,gender,uniform_type,parent_mobile,shirt_size,pant_size
-Aarav Shah,1,boy,regular,9876543210,28,28
-Priya Iyer,2,girl,regular,9000000111,24,
-Rohit Kumar,1,boy,regular,9000000222,30,30`;
+const SAMPLE = `customer_name,group,option,type,customer_mobile,top_size,bottom_size
+Customer One,Default,standard,regular,9876543210,M,32
+Customer Two,Default,alternate,regular,9000000111,S,
+Customer Three,Default,standard,regular,9000000222,L,34`;
 
 function parseCsv(text: string): Row[] {
   const lines = text.trim().split(/\r?\n/).filter(Boolean);
   if (lines.length === 0) return [];
   const headers = lines[0].split(",").map((h) => h.trim().toLowerCase());
   const idx = (name: string) => headers.indexOf(name);
+  const pick = (cols: string[], ...keys: string[]) => {
+    for (const key of keys) {
+      const i = idx(key);
+      if (i >= 0 && cols[i]) return cols[i];
+    }
+    return "";
+  };
+  const optionToGender = (value: string): Row["gender"] => {
+    const v = value.toLowerCase();
+    if (v === "alternate" || v === "girl") return "girl";
+    if (v === "universal" || v === "unisex") return "unisex";
+    return "boy";
+  };
   return lines.slice(1).map((line) => {
     const cols = line.split(",").map((c) => c.trim());
     return {
-      student_name: cols[idx("student_name")] ?? "",
-      class: cols[idx("class")] ?? "",
-      gender: (cols[idx("gender")] ?? "boy") as Row["gender"],
-      uniform_type: cols[idx("uniform_type")] ?? "regular",
-      parent_mobile: cols[idx("parent_mobile")] || undefined,
-      shirt_size: cols[idx("shirt_size")] || undefined,
-      pant_size: cols[idx("pant_size")] || undefined,
+      student_name: pick(cols, "customer_name", "student_name"),
+      class: pick(cols, "group", "class"),
+      gender: optionToGender(pick(cols, "option", "gender")),
+      uniform_type: pick(cols, "type", "uniform_type") || "regular",
+      customer_mobile: pick(cols, "customer_mobile", "parent_mobile") || undefined,
+      shirt_size: pick(cols, "top_size", "shirt_size") || undefined,
+      pant_size: pick(cols, "bottom_size", "pant_size") || undefined,
     };
   });
+}
+
+function optionLabel(value: Row["gender"]): string {
+  if (value === "girl") return "Alternate";
+  if (value === "unisex") return "Universal";
+  return "Standard";
 }
 
 export default function BulkOrderPage() {
@@ -85,17 +100,17 @@ export default function BulkOrderPage() {
 
   /**
    * Resolve a row against the local catalog: find the kit for
-   * (school, class, gender, uniform_type) and pick the variant matching
+   * (channel, group, profile, item type) and pick the variant matching
    * shirt_size / pant_size if provided.
    */
   async function resolveRow(row: Row): Promise<Row> {
     if (!schoolId) {
-      return { ...row, status: "error", message: "Pick a school first" };
+      return { ...row, status: "error", message: "Pick an outlet first" };
     }
     const classes = classesBySchool[schoolId] ?? [];
     const cls = classes.find((c) => c.class_name === row.class);
     if (!cls) {
-      return { ...row, status: "error", message: `Class "${row.class}" not found` };
+      return { ...row, status: "error", message: `Group "${row.class}" not found` };
     }
     const kitInfo: any = await window.pos.findKitByContext({
       school_id: schoolId,
@@ -107,7 +122,7 @@ export default function BulkOrderPage() {
       return {
         ...row,
         status: "error",
-        message: `No kit configured for class ${row.class} ${row.gender} ${row.uniform_type}`,
+        message: `No bundle configured for group ${row.class} ${optionLabel(row.gender)} ${row.uniform_type}`,
       };
     }
     const preview: Row["preview"] = [];
@@ -210,7 +225,7 @@ export default function BulkOrderPage() {
             school_id: schoolId,
             class_id: cls?.id ?? null,
             student_name: row.student_name,
-            parent_mobile: row.parent_mobile ?? null,
+            parent_mobile: row.customer_mobile ?? null,
             subtotal,
             discount_total: 0,
             tax_total: 0,
@@ -235,7 +250,7 @@ export default function BulkOrderPage() {
               school_id: schoolId,
               class_id: cls?.id ?? null,
               student_name: row.student_name,
-              parent_mobile: row.parent_mobile ?? null,
+              parent_mobile: row.customer_mobile ?? null,
               subtotal,
               discount_total: 0,
               tax_total: 0,
@@ -274,14 +289,14 @@ export default function BulkOrderPage() {
   return (
     <div style={{ padding: 12 }}>
       <div className="panel" style={{ marginBottom: 12 }}>
-        <h2 style={{ marginTop: 0 }}>Bulk school order</h2>
+        <h2 style={{ marginTop: 0 }}>Bulk order upload</h2>
         <div className="muted" style={{ marginBottom: 8 }}>
-          Paste the school's CSV with headers: <code>student_name, class, gender, uniform_type, parent_mobile, shirt_size, pant_size</code>.
+          Paste a CSV with headers: <code>customer_name, group, option, type, customer_mobile, top_size, bottom_size</code>.
           Each row turns into one queued offline order with the configured kit.
         </div>
         <div className="row" style={{ alignItems: "flex-end" }}>
           <div style={{ flex: 1 }}>
-            <label>School</label>
+            <label>Outlet</label>
             <select value={schoolId} onChange={(e) => setSchoolId(e.target.value)}>
               <option value="">Select…</option>
               {schools.map((s) => (
@@ -294,7 +309,7 @@ export default function BulkOrderPage() {
           <div>
             <label>Payment</label>
             <select value={paymentMode} onChange={(e) => setPaymentMode(e.target.value as any)}>
-              <option value="credit">Credit / school invoice</option>
+              <option value="credit">Credit / invoice</option>
               <option value="cash">Cash on delivery</option>
             </select>
           </div>
@@ -336,9 +351,9 @@ export default function BulkOrderPage() {
           <table style={{ marginTop: 12 }}>
             <thead>
               <tr>
-                <th>Student</th>
-                <th>Class</th>
-                <th>Gender</th>
+                <th>Customer</th>
+                <th>Group</th>
+                <th>Option</th>
                 <th>Items</th>
                 <th>Total</th>
                 <th>Status</th>
@@ -349,10 +364,10 @@ export default function BulkOrderPage() {
                 <tr key={i}>
                   <td>
                     {r.student_name}
-                    <div className="muted" style={{ fontSize: 11 }}>{r.parent_mobile ?? ""}</div>
+                    <div className="muted" style={{ fontSize: 11 }}>{r.customer_mobile ?? ""}</div>
                   </td>
                   <td>{r.class}</td>
-                  <td>{r.gender}</td>
+                  <td>{optionLabel(r.gender)}</td>
                   <td>
                     {r.preview?.map((p, j) => (
                       <div key={j} style={{ fontSize: 12 }}>
@@ -396,3 +411,4 @@ export default function BulkOrderPage() {
     </div>
   );
 }
+

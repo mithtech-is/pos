@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
  * Live transactions screen.
  *
  * Pulls from the device's own local_orders (always live, works offline) and
- * groups by payment mode / cashier / school / hour. Cashier sees totals
+ * groups by payment mode / cashier / outlet / hour. Cashier sees totals
  * update the instant a sale completes — no waiting for backend sync.
  *
  * "Include all counters" toggle merges in the backend's /pos/transactions
@@ -12,7 +12,7 @@ import { useEffect, useMemo, useState } from "react";
  * backend reachable; offline simply falls back to local-only.
  *
  * Important: this view answers "how much have WE sold and through which
- * channels", NOT "how much money has hit our bank account". UPI/Cash/Credit
+ * outlets", NOT "how much money has hit our bank account". UPI/Cash/Credit
  * reconciliation against the bank requires a payment gateway integration
  * (Razorpay / Cashfree / PayU), which the spec keeps out of MVP scope.
  */
@@ -43,7 +43,7 @@ const MODE_ICONS: Record<string, string> = {
 
 const MODE_COLORS: Record<string, string> = {
   cash: "var(--success)",
-  upi: "var(--info)",
+  upi: "var(--text-soft)",
   card: "var(--accent)",
   credit: "var(--warning)",
 };
@@ -85,7 +85,7 @@ function rangeBounds(w: Range): { since: Date; until: Date } {
 
 export default function TransactionsPage() {
   const [orders, setOrders] = useState<LocalOrder[]>([]);
-  const [schoolNames, setSchoolNames] = useState<Record<string, string>>({});
+  const [outletNames, setOutletNames] = useState<Record<string, string>>({});
   const [range, setRange] = useState<Range>("today");
   const [updatedAt, setUpdatedAt] = useState<Date>(new Date());
 
@@ -95,7 +95,7 @@ export default function TransactionsPage() {
     const schools = await window.pos.listSchools();
     const map: Record<string, string> = {};
     for (const s of schools) map[s.id] = `${s.code} · ${s.name}`;
-    setSchoolNames(map);
+    setOutletNames(map);
     setUpdatedAt(new Date());
   }
 
@@ -128,7 +128,7 @@ export default function TransactionsPage() {
     return Array.from(m.values()).sort((a, b) => b.gross - a.gross);
   }, [filtered]);
 
-  const bySchool = useMemo(() => {
+  const byOutlet = useMemo(() => {
     const m = new Map<string, { school_id: string; count: number; gross: number }>();
     for (const o of filtered) {
       const cur = m.get(o.school_id) ?? { school_id: o.school_id, count: 0, gross: 0 };
@@ -310,26 +310,26 @@ export default function TransactionsPage() {
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 12 }}>
-        {/* By school */}
+        {/* By outlet */}
         <div className="panel elev">
-          <strong>🏫 By school</strong>
+          <strong>By outlet</strong>
           <table style={{ marginTop: 10 }}>
             <thead>
               <tr>
-                <th>School</th>
+                <th>Outlet</th>
                 <th className="right">Orders</th>
                 <th className="right">Gross</th>
               </tr>
             </thead>
             <tbody>
-              {bySchool.map((s) => (
+              {byOutlet.map((s) => (
                 <tr key={s.school_id}>
-                  <td>{schoolNames[s.school_id] ?? s.school_id.slice(-8)}</td>
+                  <td>{outletNames[s.school_id] ?? s.school_id.slice(-8)}</td>
                   <td className="right">{s.count}</td>
                   <td className="right">{inr(s.gross)}</td>
                 </tr>
               ))}
-              {bySchool.length === 0 && (
+              {byOutlet.length === 0 && (
                 <tr><td colSpan={3} className="muted">No data.</td></tr>
               )}
             </tbody>
@@ -371,8 +371,8 @@ export default function TransactionsPage() {
             <tr>
               <th>Time</th>
               <th>Local #</th>
-              <th>Student / Mobile</th>
-              <th>School</th>
+              <th>Customer / Mobile</th>
+              <th>Outlet</th>
               <th>Mode</th>
               <th>Reference (UTR)</th>
               <th className="right">Amount</th>
@@ -388,7 +388,7 @@ export default function TransactionsPage() {
                   {o.student_name ?? <span className="muted">—</span>}
                   <div className="muted" style={{ fontSize: 11 }}>{o.parent_mobile ?? ""}</div>
                 </td>
-                <td>{schoolNames[o.school_id]?.split(" · ")[0] ?? "—"}</td>
+                <td>{outletNames[o.school_id]?.split(" · ")[0] ?? "—"}</td>
                 <td>
                   <span style={{ color: MODE_COLORS[o.payment_mode] ?? "var(--muted)" }}>
                     {MODE_ICONS[o.payment_mode] ?? "💰"} {o.payment_mode}
@@ -418,12 +418,10 @@ export default function TransactionsPage() {
         <strong style={{ color: "var(--muted-2)" }}>Note on UPI reconciliation:</strong>{" "}
         <span className="muted">
           These totals reflect every sale this POS has rung up. Money landing
-          in your bank account is verified separately — for automated bank-side
-          reconciliation you need a payment gateway (Razorpay / Cashfree /
-          Paytm) which can be added without changing this view.
+          in your bank account is verified separately; automated bank-side
+          reconciliation can be added through a payment gateway integration.
         </span>
       </div>
     </div>
   );
 }
-

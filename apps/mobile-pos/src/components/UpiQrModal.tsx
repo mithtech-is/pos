@@ -53,7 +53,7 @@ export default function UpiQrModal({
   const [error, setError] = useState<string | null>(null);
 
   const deepLink = vpa
-    ? buildUpiDeepLink({ vpa, payeeName, amount, reference, note: `Uniform order ${reference}` })
+    ? buildUpiDeepLink({ vpa, payeeName, amount, reference, note: `Order ${reference}` })
     : "";
 
   function submit() {
@@ -69,7 +69,7 @@ export default function UpiQrModal({
 
   /**
    * Open the cashier's own UPI app — useful when the cashier wants to pay
-   * from their phone instead of showing the QR to the parent. The Android
+   * from their phone instead of showing the QR to the customer. The Android
    * intent picker opens; on iOS this will only succeed if a UPI app is
    * registered to handle the upi:// scheme.
    */
@@ -91,7 +91,7 @@ export default function UpiQrModal({
         <Panel elev style={{ borderRadius: radius.md }}>
           <Title>📱 UPI payment — {inr2(amount)}</Title>
           <Muted style={{ marginTop: 6, marginBottom: 12 }}>
-            Show this QR to the parent. They scan with any UPI app
+            Show this QR to the customer. They scan with any UPI app
             (GPay / PhonePe / Paytm / BHIM), tap Pay, then read out the UTR.
           </Muted>
           {!vpa ? (
@@ -108,7 +108,7 @@ export default function UpiQrModal({
                 marginBottom: 12,
               }}
             >
-              <QRCode value={deepLink} size={240} backgroundColor="white" color="#0b1120" />
+              <QRCode value={deepLink} size={240} backgroundColor="white" color="#000000" />
             </View>
           )}
           {!!deepLink && (

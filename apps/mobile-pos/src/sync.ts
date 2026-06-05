@@ -8,6 +8,7 @@ import {
   SYNC_MAX_RETRIES,
 } from "@pos/shared";
 import { masterData, orders, settings, syncQueue, users } from "./db/repositories";
+import { DEFAULT_BACKEND_URL } from "./config";
 
 /**
  * Foreground sync worker for the mobile POS.
@@ -52,7 +53,7 @@ function emit() {
 
 async function backendUrl(): Promise<string> {
   const stored = await settings.get<string>("backend_url");
-  return stored ?? "http://localhost:9000";
+  return stored ?? DEFAULT_BACKEND_URL;
 }
 
 async function deviceCode(): Promise<string> {

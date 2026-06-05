@@ -27,6 +27,13 @@ export interface ReceiptData {
   discount_total: number;
   tax_total: number;
   grand_total: number;
+  // GST tax-invoice fields (optional; populated when a GST rate is configured)
+  gst_rate?: number; // full rate as a percent, e.g. 18
+  taxable_value?: number;
+  cgst?: number;
+  sgst?: number;
+  hsn_code?: string;
+  price_includes_tax?: boolean;
   payment_mode: PaymentMode;
   payment_reference?: string | null;
   sync_status: "offline_pending" | "synced";

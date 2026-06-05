@@ -29,7 +29,7 @@ type Reason =
   | "defective_item"
   | "wrong_product"
   | "duplicate_purchase"
-  | "school_change"
+  | "context_change"
   | "other";
 
 const REASONS: { id: Reason; label: string }[] = [
@@ -37,7 +37,7 @@ const REASONS: { id: Reason; label: string }[] = [
   { id: "defective_item", label: "Defective item" },
   { id: "wrong_product", label: "Wrong product" },
   { id: "duplicate_purchase", label: "Duplicate purchase" },
-  { id: "school_change", label: "School change" },
+  { id: "context_change", label: "Context change" },
   { id: "other", label: "Other" },
 ];
 
@@ -164,7 +164,7 @@ export default function ReturnsScreen() {
     <ScrollView style={styles.screen} contentContainerStyle={styles.scrollPad}>
       <Title style={{ marginBottom: 8 }}>↩️ Returns</Title>
       <Input
-        placeholder="Local # or parent mobile"
+        placeholder="Local # or customer mobile"
         value={query}
         onChangeText={runSearch}
         helper="Search the cashier's local orders."
@@ -197,7 +197,7 @@ export default function ReturnsScreen() {
         <Panel style={{ marginTop: 12 }}>
           <Title style={{ fontSize: 16 }}>Return items from {selected.local_order_number}</Title>
           <Muted>
-            Student: {selected.student_name ?? "—"} · {selected.parent_mobile ?? "—"}
+            Customer: {selected.student_name ?? "—"} · {selected.parent_mobile ?? "—"}
           </Muted>
           <View style={{ height: 12 }} />
           {selected.items.map((it: any) => {

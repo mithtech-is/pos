@@ -165,7 +165,7 @@ export default function OrdersScreen() {
         "Cashier";
       const receipt: ReceiptData = {
         distributor_name:
-          (await settings.get<string>("distributor_name")) ?? "Trail Blaze Retail",
+          (await settings.get<string>("distributor_name")) ?? "CounterFlow Store",
         distributor_address:
           (await settings.get<string>("distributor_address")) ?? undefined,
         gstin: (await settings.get<string>("distributor_gstin")) ?? undefined,

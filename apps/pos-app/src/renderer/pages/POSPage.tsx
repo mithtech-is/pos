@@ -1,13 +1,33 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { v4 as uuidv4 } from "uuid";
-import { buildIdempotencyKey } from "@pos/shared";
+import {
+  buildIdempotencyKey,
+  computeGstBreakup,
+  computePromoDiscount,
+  isPromoActiveAt,
+  type PosPromotion,
+} from "@pos/shared";
 import { useAuthStore } from "../state/auth";
-import { useCartStore } from "../state/cart";
+import { useCartStore, type CartLine } from "../state/cart";
 import ManagerPinModal from "../components/ManagerPinModal";
 import UpiQrModal from "../components/UpiQrModal";
 
 /** Discount percentage above which manager PIN is required. */
 const DISCOUNT_PIN_THRESHOLD_PCT = 10;
+
+/** A sale parked ("held") so the cashier can serve another customer and resume later. */
+type HeldTicket = {
+  id: string;
+  label: string;
+  held_at: number;
+  cart_discount: number;
+  school_id: string | null;
+  class_id: string | null;
+  gender: "boy" | "girl" | "unisex";
+  uniform_type: string;
+  student_name: string;
+  parent_mobile: string;
+  lines: CartLine[];
+};
 
 /**
  * Main POS billing screen.
@@ -22,8 +42,9 @@ const DISCOUNT_PIN_THRESHOLD_PCT = 10;
  *   - We keep the scanner input focused at all times so the next scan always
  *     lands there. Click anywhere else, then ~250ms later it refocuses.
  *   - Successful scan: instant cart line + green toast + pulse animation.
- *   - Failed scan: red toast + "Add manually" affordance pre-filled with the
- *     scanned code so the cashier can still ring it up.
+ *   - Failed scan: red toast telling the cashier to use Search. Cashiers can
+ *     NOT hand-key arbitrary items — that would let junk / wrong-price lines
+ *     into sales. Unreadable barcode -> search the catalog for the real item.
  *
  * Offline-first contract (spec section 14.1) — Complete Sale never touches
  * the network: local order number, idempotency key, save to SQLite, reduce
@@ -52,12 +73,6 @@ export default function POSPage() {
     description: string;
     onApprove: (info: any) => void;
   } | null>(null);
-  const [manualEntry, setManualEntry] = useState<null | {
-    barcode: string;
-    name: string;
-    size: string;
-    price: number;
-  }>(null);
   const [upiModal, setUpiModal] = useState<null | {
     amount: number;
     reference: string;
@@ -67,6 +82,18 @@ export default function POSPage() {
   }>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [held, setHeld] = useState<HeldTicket[]>([]);
+  const [gstRate, setGstRate] = useState(0);
+  const [priceIncludesTax, setPriceIncludesTax] = useState(false);
+  const [hsnCode, setHsnCode] = useState("");
+  const [gstin, setGstin] = useState("");
+  const [customer, setCustomer] = useState<any | null>(null);
+  const [redeemPoints, setRedeemPoints] = useState(0);
+  const [earnRate, setEarnRate] = useState(100);
+  const [promos, setPromos] = useState<PosPromotion[]>([]);
+  const [couponCode, setCouponCode] = useState("");
+  const [appliedPromo, setAppliedPromo] = useState<PosPromotion | null>(null);
+  const [promoMsg, setPromoMsg] = useState<string | null>(null);
   const barcodeRef = useRef<HTMLInputElement>(null);
 
   // Keep the scanner input focused. Refocus ONLY when nothing else has focus
@@ -74,17 +101,66 @@ export default function POSPage() {
   // dropdown, and stealing from any input/textarea/button is just rude.
   useEffect(() => {
     const interval = setInterval(() => {
-      if (pinModal || manualEntry) return;
+      if (pinModal) return;
       const active = document.activeElement;
       if (!active || active === document.body || active === document.documentElement) {
         barcodeRef.current?.focus();
       }
     }, 600);
     return () => clearInterval(interval);
-  }, [pinModal, manualEntry]);
+  }, [pinModal]);
 
   useEffect(() => {
     (async () => setSchools(await window.pos.listSchools()))().catch(() => {});
+  }, []);
+
+  // Load any parked (held) sales persisted in local settings.
+  useEffect(() => {
+    (async () => {
+      const saved = (await window.pos.getSetting("held_orders")) as HeldTicket[] | null;
+      if (Array.isArray(saved)) setHeld(saved);
+    })().catch(() => {});
+  }, []);
+
+  // Load tax / GST configuration so checkout totals + the invoice reflect it.
+  useEffect(() => {
+    (async () => {
+      setGstRate(Number((await window.pos.getSetting("gst_rate")) ?? 0) || 0);
+      setPriceIncludesTax(
+        ((await window.pos.getSetting("price_includes_tax")) as boolean) ?? false,
+      );
+      setHsnCode(((await window.pos.getSetting("hsn_code")) as string) ?? "");
+      setGstin(((await window.pos.getSetting("distributor_gstin")) as string) ?? "");
+      setEarnRate(Number((await window.pos.getSetting("loyalty_rupees_per_point")) ?? 100) || 100);
+    })().catch(() => {});
+  }, []);
+
+  // Loyalty: look up the customer by phone (debounced) and autofill their name.
+  useEffect(() => {
+    const phone = cart.parent_mobile.trim();
+    if (phone.length < 6) {
+      setCustomer(null);
+      setRedeemPoints(0);
+      return;
+    }
+    const h = setTimeout(async () => {
+      const res = await window.pos.lookupCustomer(phone);
+      if (res?.ok && res.data) {
+        setCustomer(res.data);
+        if (!cart.student_name && res.data.name) cart.setStudent(res.data.name, phone);
+      } else {
+        setCustomer(null);
+      }
+    }, 400);
+    return () => clearTimeout(h);
+  }, [cart.parent_mobile]);
+
+  // Load promotions (cached locally for offline use).
+  useEffect(() => {
+    (async () => {
+      const res = await window.pos.listPromotions();
+      if (res?.ok && Array.isArray(res.data)) setPromos(res.data);
+    })().catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -145,8 +221,7 @@ export default function POSPage() {
     const variant: any = await window.pos.findByBarcode(code);
     if (!variant) {
       pulseScanner("miss");
-      showToast("error", `No product for "${code}" — add manually?`);
-      setManualEntry({ barcode: code, name: "", size: "", price: 0 });
+      showToast("error", `No product matches "${code}". Use Search to find it.`);
       return;
     }
     cart.addLine({
@@ -176,26 +251,6 @@ export default function POSPage() {
         ...prev,
       ].slice(0, 6),
     );
-  }
-
-  function commitManualEntry() {
-    if (!manualEntry) return;
-    if (!manualEntry.name || manualEntry.price <= 0) {
-      showToast("error", "Name and price required");
-      return;
-    }
-    cart.addLine({
-      variant_id: `manual-${uuidv4().slice(0, 8)}`,
-      sku: manualEntry.barcode || `MANUAL-${uuidv4().slice(0, 6)}`,
-      product_name: manualEntry.name,
-      size: manualEntry.size,
-      quantity: 1,
-      unit_price: manualEntry.price,
-      discount: 0,
-      tax_rate: 0,
-    });
-    showToast("success", `Manual: ${manualEntry.name}`);
-    setManualEntry(null);
   }
 
   function addKitToCart() {
@@ -229,20 +284,139 @@ export default function POSPage() {
     showToast("success", `Added ${variant.product_name}`);
   }
 
-  const baseTotals = useMemo(() => cart.totals(), [cart.lines]);
-  const totals = useMemo(() => {
-    const grand_total = Math.max(0, baseTotals.grand_total - cartDiscount);
-    return {
-      ...baseTotals,
-      discount_total: baseTotals.discount_total + cartDiscount,
-      grand_total,
+  // ---- Held / parked sales -------------------------------------------------
+  function persistHeld(next: HeldTicket[]) {
+    setHeld(next);
+    void window.pos.setSetting({ key: "held_orders", value: next });
+  }
+
+  function holdCurrentSale() {
+    if (cart.lines.length === 0) {
+      showToast("error", "Nothing to hold");
+      return;
+    }
+    const now = new Date();
+    const ticket: HeldTicket = {
+      id: `${Date.now()}-${Math.floor(Math.random() * 1e6)}`,
+      label:
+        cart.student_name?.trim() ||
+        `Ticket ${now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`,
+      held_at: Date.now(),
+      cart_discount: cartDiscount,
+      school_id: cart.school_id,
+      class_id: cart.class_id,
+      gender: cart.gender,
+      uniform_type: cart.uniform_type,
+      student_name: cart.student_name,
+      parent_mobile: cart.parent_mobile,
+      lines: cart.lines,
     };
-  }, [baseTotals, cartDiscount]);
+    persistHeld([ticket, ...held]);
+    cart.reset();
+    setCartDiscount(0);
+    setDiscountApprovedBy(null);
+    showToast(
+      "success",
+      `Parked "${ticket.label}" (${ticket.lines.length} item${ticket.lines.length === 1 ? "" : "s"})`,
+    );
+  }
+
+  function resumeTicket(t: HeldTicket) {
+    if (cart.lines.length > 0) {
+      showToast("error", "Hold or clear the current sale before resuming another");
+      return;
+    }
+    cart.loadCart({
+      school_id: t.school_id,
+      class_id: t.class_id,
+      gender: t.gender,
+      uniform_type: t.uniform_type,
+      student_name: t.student_name,
+      parent_mobile: t.parent_mobile,
+      lines: t.lines,
+    });
+    setCartDiscount(t.cart_discount || 0);
+    setDiscountApprovedBy(null);
+    persistHeld(held.filter((x) => x.id !== t.id));
+    showToast("success", `Resumed "${t.label}"`);
+  }
+
+  function removeTicket(id: string) {
+    persistHeld(held.filter((x) => x.id !== id));
+  }
+
+  // ---- Promotions ----------------------------------------------------------
+  function applyCoupon() {
+    const code = couponCode.trim().toUpperCase();
+    if (!code) return;
+    const promo = promos.find((p) => p.code.toUpperCase() === code);
+    if (!promo) {
+      setPromoMsg(`No coupon "${code}"`);
+      return;
+    }
+    if (!isPromoActiveAt(promo, new Date())) {
+      setPromoMsg(`Coupon "${code}" is not active right now`);
+      return;
+    }
+    const sub =
+      cart.lines.reduce((s, l) => s + l.quantity * l.unit_price - l.discount, 0) - cartDiscount;
+    if (promo.min_subtotal && sub < promo.min_subtotal) {
+      setPromoMsg(`Needs a minimum subtotal of ₹${promo.min_subtotal}`);
+      return;
+    }
+    const totalQty = cart.lines.reduce((s, l) => s + l.quantity, 0);
+    const cheapestUnit = cart.lines.length ? Math.min(...cart.lines.map((l) => l.unit_price)) : 0;
+    const disc = computePromoDiscount(promo, { subtotal: Math.max(0, sub), cheapestUnit, totalQty });
+    if (disc <= 0) {
+      setPromoMsg(`Coupon "${code}" gives no discount on this cart`);
+      return;
+    }
+    setAppliedPromo(promo);
+    setPromoMsg(null);
+    setCouponCode("");
+    showToast("success", `Coupon ${code} applied`);
+  }
+
+  function removeCoupon() {
+    setAppliedPromo(null);
+    setPromoMsg(null);
+  }
+
+  const totals = useMemo(() => {
+    const subtotal = cart.lines.reduce((s, l) => s + l.quantity * l.unit_price, 0);
+    const lineDiscounts = cart.lines.reduce((s, l) => s + l.discount, 0);
+    const afterCartDisc = Math.max(0, subtotal - lineDiscounts - cartDiscount);
+    const totalQty = cart.lines.reduce((s, l) => s + l.quantity, 0);
+    const cheapestUnit = cart.lines.length
+      ? Math.min(...cart.lines.map((l) => l.unit_price))
+      : 0;
+    const promoDiscount = appliedPromo
+      ? computePromoDiscount(appliedPromo, { subtotal: afterCartDisc, cheapestUnit, totalQty })
+      : 0;
+    const afterPromo = Math.max(0, afterCartDisc - promoDiscount);
+    // Redeemed points (1 pt = ₹1), capped at the balance and the payable amount.
+    const redeemValue = Math.max(
+      0,
+      Math.min(redeemPoints, customer?.loyalty_points ?? 0, afterPromo),
+    );
+    const grossAfterDiscount = afterPromo - redeemValue;
+    const gst = computeGstBreakup(grossAfterDiscount, gstRate, priceIncludesTax);
+    return {
+      subtotal,
+      discount_total: lineDiscounts + cartDiscount,
+      promo_discount: promoDiscount,
+      promo_code: appliedPromo?.code ?? null,
+      redeem_value: redeemValue,
+      taxable_value: gst.taxable_value,
+      tax_total: gst.gst_amount,
+      cgst: gst.cgst,
+      sgst: gst.sgst,
+      grand_total: gst.grand_total,
+    };
+  }, [cart.lines, cartDiscount, gstRate, priceIncludesTax, redeemPoints, customer, appliedPromo]);
 
   const effectiveDiscountPct =
-    baseTotals.subtotal > 0
-      ? (totals.discount_total / baseTotals.subtotal) * 100
-      : 0;
+    totals.subtotal > 0 ? (totals.discount_total / totals.subtotal) * 100 : 0;
 
   function requestDiscount(amount: number) {
     if (amount <= 0) {
@@ -250,8 +424,8 @@ export default function POSPage() {
       setDiscountApprovedBy(null);
       return;
     }
-    const pct =
-      baseTotals.subtotal > 0 ? (amount / baseTotals.subtotal) * 100 : 0;
+    const subtotal = cart.lines.reduce((s, l) => s + l.quantity * l.unit_price, 0);
+    const pct = subtotal > 0 ? (amount / subtotal) * 100 : 0;
     if (pct <= DISCOUNT_PIN_THRESHOLD_PCT || user?.role === "manager") {
       setCartDiscount(amount);
       setDiscountApprovedBy(user?.role === "manager" ? user.id : null);
@@ -280,7 +454,7 @@ export default function POSPage() {
       return;
     }
     if (!cart.school_id) {
-      showToast("error", "Pick a school first");
+      showToast("error", "Pick an outlet first");
       return;
     }
     if (paymentMode === "upi") {
@@ -319,15 +493,13 @@ export default function POSPage() {
       return;
     }
     if (!cart.school_id) {
-      showToast("error", "Pick a school first");
+      showToast("error", "Pick an outlet first");
       return;
     }
     setBusy(true);
     setMessage(null);
     try {
       for (const line of cart.lines) {
-        // Skip stock check for manual entries.
-        if (line.variant_id.startsWith("manual-")) continue;
         const available = await window.pos.getLocalAvailable(line.variant_id);
         if (available < line.quantity) {
           const allowNegative =
@@ -384,7 +556,6 @@ export default function POSPage() {
       });
 
       for (const line of cart.lines) {
-        if (line.variant_id.startsWith("manual-")) continue;
         await window.pos.applyLocalSale({
           variant_id: line.variant_id,
           quantity: line.quantity,
@@ -418,16 +589,20 @@ export default function POSPage() {
 
       const distributorName =
         ((await window.pos.getSetting("distributor_name")) as string) ??
-        "Trail Blaze Retail Pvt Ltd";
+        "CounterFlow Store";
+      const distributorAddress =
+        ((await window.pos.getSetting("distributor_address")) as string) ?? "";
       const receipt = {
         distributor_name: distributorName,
+        distributor_address: distributorAddress || undefined,
+        gstin: gstin || undefined,
         receipt_number: `R-${localOrderNumber}`,
         local_order_number: localOrderNumber,
         server_order_number: null,
         date_time: createdAt,
         cashier_name: user.name,
         school_name:
-          schools.find((s) => s.id === cart.school_id)?.name ?? "School",
+          schools.find((s) => s.id === cart.school_id)?.name ?? "Default",
         student_name: cart.student_name || null,
         parent_mobile: cart.parent_mobile || null,
         items: itemsForDb,
@@ -435,6 +610,12 @@ export default function POSPage() {
         discount_total: totals.discount_total,
         tax_total: totals.tax_total,
         grand_total: totals.grand_total,
+        gst_rate: gstRate || undefined,
+        taxable_value: totals.taxable_value,
+        cgst: totals.cgst,
+        sgst: totals.sgst,
+        hsn_code: hsnCode || undefined,
+        price_includes_tax: priceIncludesTax,
         payment_mode: paymentMode,
         payment_reference: reference ?? paymentReference ?? null,
         sync_status: "offline_pending" as const,
@@ -449,11 +630,31 @@ export default function POSPage() {
         action: "bill.created",
         data: { local_order_number: localOrderNumber, total: totals.grand_total },
       });
+      // Loyalty: best-effort, online-only — the sale is already saved locally,
+      // so a failure here never affects the bill.
+      const loyaltyPhone = cart.parent_mobile.trim();
+      if (loyaltyPhone.length >= 6) {
+        void window.pos
+          .awardPoints({
+            phone: loyaltyPhone,
+            name: cart.student_name || undefined,
+            spent: totals.grand_total,
+            redeem_points: totals.redeem_value,
+            earn_rupees_per_point: earnRate,
+          })
+          .catch(() => {});
+      }
+
       showToast("success", `Bill ${localOrderNumber} · ₹${totals.grand_total.toFixed(0)}`);
       setMessage(null);
       cart.reset();
       setCartDiscount(0);
       setDiscountApprovedBy(null);
+      setRedeemPoints(0);
+      setCustomer(null);
+      setAppliedPromo(null);
+      setCouponCode("");
+      setPromoMsg(null);
     } catch (err) {
       const msg = (err as Error).message;
       setMessage(msg);
@@ -479,36 +680,36 @@ export default function POSPage() {
       {/* Top context bar */}
       <div className="topbar" style={{ borderTop: "1px solid var(--border)" }}>
         <select value={cart.school_id ?? ""} onChange={(e) => cart.setSchool(e.target.value || null)}>
-          <option value="">🏫 Select school…</option>
+          <option value="">Select outlet...</option>
           {schools.map((s) => (
             <option key={s.id} value={s.id}>{s.name} ({s.code})</option>
           ))}
         </select>
         <select value={cart.class_id ?? ""} onChange={(e) => cart.setClass(e.target.value || null)}>
-          <option value="">Class…</option>
+          <option value="">Group...</option>
           {classes.map((c) => (
-            <option key={c.id} value={c.id}>Class {c.class_name}</option>
+            <option key={c.id} value={c.id}>Group {c.class_name}</option>
           ))}
         </select>
         <select value={cart.gender} onChange={(e) => cart.setGender(e.target.value as any)}>
-          <option value="boy">Boy</option>
-          <option value="girl">Girl</option>
-          <option value="unisex">Unisex</option>
+          <option value="boy">Standard</option>
+          <option value="girl">Alternate</option>
+          <option value="unisex">Universal</option>
         </select>
         <select value={cart.uniform_type} onChange={(e) => cart.setUniformType(e.target.value)}>
-          <option value="regular">Regular</option>
-          <option value="summer">Summer</option>
-          <option value="winter">Winter</option>
-          <option value="sports">Sports</option>
-          <option value="house">House</option>
+          <option value="regular">Default</option>
+          <option value="summer">Seasonal</option>
+          <option value="winter">Priority</option>
+          <option value="sports">Service</option>
+          <option value="house">Custom</option>
         </select>
         <input
-          placeholder="Student name"
+          placeholder="Customer name"
           value={cart.student_name}
           onChange={(e) => cart.setStudent(e.target.value, cart.parent_mobile)}
         />
         <input
-          placeholder="Parent mobile"
+          placeholder="Customer mobile"
           value={cart.parent_mobile}
           onChange={(e) => cart.setStudent(cart.student_name, e.target.value)}
         />
@@ -541,14 +742,6 @@ export default function POSPage() {
                       : undefined,
               }}
             />
-            <button
-              className="ghost"
-              style={{ width: "100%", marginTop: 10 }}
-              onClick={() => setManualEntry({ barcode: "", name: "", size: "", price: 0 })}
-            >
-              ✏️  Add item manually
-            </button>
-
             <hr className="divider" />
 
             <label>Search product</label>
@@ -563,7 +756,7 @@ export default function POSPage() {
             <div className="panel" style={{ marginTop: 12 }}>
               <div className="row" style={{ justifyContent: "space-between" }}>
                 <div>
-                  <strong>📦 Suggested kit</strong>
+                  <strong>Suggested bundle</strong>
                   <div className="muted">{kit.kit?.name ?? schoolName}</div>
                 </div>
                 <button className="primary" onClick={addKitToCart}>Add all</button>
@@ -602,6 +795,50 @@ export default function POSPage() {
                     <span>₹{Number(s.price).toFixed(0)}</span>
                   </div>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {held.length > 0 && (
+            <div className="panel" style={{ marginTop: 12 }}>
+              <div className="row" style={{ justifyContent: "space-between" }}>
+                <strong>⏸ Parked sales</strong>
+                <span className="badge">{held.length}</span>
+              </div>
+              <div style={{ marginTop: 8 }}>
+                {held.map((t) => {
+                  const total =
+                    t.lines.reduce((s, l) => s + l.quantity * l.unit_price - l.discount, 0) -
+                    (t.cart_discount || 0);
+                  return (
+                    <div
+                      key={t.id}
+                      className="row"
+                      style={{
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        padding: "6px 0",
+                        borderBottom: "1px solid var(--border)",
+                      }}
+                    >
+                      <div style={{ minWidth: 0 }}>
+                        <div
+                          className="name"
+                          style={{ fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}
+                        >
+                          {t.label}
+                        </div>
+                        <div className="meta">
+                          {t.lines.length} item{t.lines.length === 1 ? "" : "s"} · ₹{total.toFixed(0)}
+                        </div>
+                      </div>
+                      <div className="row" style={{ gap: 6 }}>
+                        <button className="primary" onClick={() => resumeTicket(t)}>Resume</button>
+                        <button className="ghost" onClick={() => removeTicket(t.id)}>×</button>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -667,11 +904,66 @@ export default function POSPage() {
               ))}
             </div>
 
+            {customer && (
+              <div
+                style={{
+                  marginTop: 10,
+                  padding: "8px 10px",
+                  borderRadius: 8,
+                  background: "var(--panel-2, #f1f1f1)",
+                  border: "1px solid var(--border)",
+                }}
+              >
+                <div className="row" style={{ justifyContent: "space-between" }}>
+                  <strong>⭐ {customer.name || "Member"}</strong>
+                  <span className="badge online">{customer.loyalty_points} pts</span>
+                </div>
+                <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>
+                  {customer.visits} visit{customer.visits === 1 ? "" : "s"} · ₹
+                  {Number(customer.total_spent).toFixed(0)} lifetime · earns{" "}
+                  {Math.floor(totals.grand_total / earnRate)} pts on this sale
+                </div>
+                {customer.loyalty_points > 0 && (
+                  <div className="row" style={{ marginTop: 6, alignItems: "center", gap: 6 }}>
+                    <label style={{ textTransform: "none", margin: 0 }}>Redeem</label>
+                    <input
+                      type="number"
+                      min={0}
+                      max={customer.loyalty_points}
+                      value={redeemPoints || ""}
+                      onChange={(e) =>
+                        setRedeemPoints(
+                          Math.max(0, Math.min(Number(e.target.value) || 0, customer.loyalty_points)),
+                        )
+                      }
+                      style={{ width: 90 }}
+                    />
+                    <span className="muted" style={{ fontSize: 11 }}>pts (₹1 each)</span>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div style={{ marginTop: 12 }}>
               <div className="total-row"><span>Subtotal</span><span>₹{totals.subtotal.toFixed(2)}</span></div>
               <div className="total-row"><span>Discount</span><span>− ₹{totals.discount_total.toFixed(2)}</span></div>
-              <div className="total-row"><span>Tax</span><span>₹{totals.tax_total.toFixed(2)}</span></div>
-              <div className="total-row total-grand"><span>Total</span><span>₹{totals.grand_total.toFixed(2)}</span></div>
+              {totals.promo_discount > 0 && (
+                <div className="total-row"><span>Coupon {totals.promo_code}</span><span>− ₹{totals.promo_discount.toFixed(2)}</span></div>
+              )}
+              {totals.redeem_value > 0 && (
+                <div className="total-row"><span>Points redeemed</span><span>− ₹{totals.redeem_value.toFixed(2)}</span></div>
+              )}
+              {gstRate > 0 && (
+                <>
+                  <div className="total-row"><span>Taxable value</span><span>₹{totals.taxable_value.toFixed(2)}</span></div>
+                  <div className="total-row"><span>CGST ({(gstRate / 2).toFixed(1)}%)</span><span>₹{totals.cgst.toFixed(2)}</span></div>
+                  <div className="total-row"><span>SGST ({(gstRate / 2).toFixed(1)}%)</span><span>₹{totals.sgst.toFixed(2)}</span></div>
+                </>
+              )}
+              <div className="total-row total-grand">
+                <span>Total{priceIncludesTax && gstRate > 0 ? " (incl. GST)" : ""}</span>
+                <span>₹{totals.grand_total.toFixed(2)}</span>
+              </div>
             </div>
 
             <div style={{ marginTop: 14 }}>
@@ -700,6 +992,29 @@ export default function POSPage() {
             </div>
 
             <div style={{ marginTop: 14 }}>
+              <label>Coupon code</label>
+              {appliedPromo ? (
+                <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
+                  <span className="badge online">{appliedPromo.code} applied</span>
+                  <button className="ghost" onClick={removeCoupon}>Remove</button>
+                </div>
+              ) : (
+                <div className="row">
+                  <input
+                    placeholder="Enter code"
+                    value={couponCode}
+                    onChange={(e) => setCouponCode(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && applyCoupon()}
+                  />
+                  <button className="outline" onClick={applyCoupon}>Apply</button>
+                </div>
+              )}
+              {promoMsg && (
+                <div className="muted" style={{ marginTop: 4, fontSize: 11 }}>{promoMsg}</div>
+              )}
+            </div>
+
+            <div style={{ marginTop: 14 }}>
               <label>Payment mode</label>
               <select value={paymentMode} onChange={(e) => setPaymentMode(e.target.value as any)}>
                 <option value="cash">💵 Cash</option>
@@ -708,7 +1023,7 @@ export default function POSPage() {
               </select>
               {paymentMode === "upi" && (
                 <div className="muted" style={{ marginTop: 6, fontSize: 11 }}>
-                  Parent scans the QR on the next screen. You'll capture the
+                  Customer scans the QR on the next screen. You'll capture the
                   UTR after they pay.
                 </div>
               )}
@@ -730,9 +1045,17 @@ export default function POSPage() {
                   ? "Saving…"
                   : paymentMode === "upi"
                     ? `📱 Show UPI QR · ₹${totals.grand_total.toFixed(0)}`
-                    : `Complete sale · ₹${totals.grand_total.toFixed(0)}`}
+                    : `Complete order · ₹${totals.grand_total.toFixed(0)}`}
               </button>
               <div className="row">
+                <button
+                  className="ghost flex-1"
+                  disabled={cart.lines.length === 0}
+                  onClick={holdCurrentSale}
+                  style={{ justifyContent: "center" }}
+                >
+                  ⏸ Hold
+                </button>
                 <button className="ghost flex-1" onClick={printLastReceipt} style={{ justifyContent: "center" }}>
                   🖨 Reprint
                 </button>
@@ -776,69 +1099,6 @@ export default function POSPage() {
           onApprove={pinModal.onApprove}
           onCancel={() => setPinModal(null)}
         />
-      )}
-
-      {/* Manual entry modal */}
-      {manualEntry && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.55)",
-            display: "grid",
-            placeItems: "center",
-            zIndex: 1000,
-          }}
-          onClick={() => setManualEntry(null)}
-        >
-          <div className="panel elev" style={{ width: 420 }} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ marginTop: 0 }}>Add manual item</h3>
-            <div className="muted" style={{ marginBottom: 12 }}>
-              {manualEntry.barcode
-                ? `Barcode "${manualEntry.barcode}" not in catalog — add it as a one-off line.`
-                : "Custom line item without a barcode."}
-            </div>
-            <div className="col">
-              <div>
-                <label>Product name *</label>
-                <input
-                  autoFocus
-                  value={manualEntry.name}
-                  onChange={(e) => setManualEntry({ ...manualEntry, name: e.target.value })}
-                />
-              </div>
-              <div className="row">
-                <div className="flex-1">
-                  <label>Size</label>
-                  <input
-                    value={manualEntry.size}
-                    onChange={(e) => setManualEntry({ ...manualEntry, size: e.target.value })}
-                  />
-                </div>
-                <div className="flex-1">
-                  <label>Price *</label>
-                  <input
-                    type="number"
-                    min={0}
-                    step={1}
-                    value={manualEntry.price || ""}
-                    onChange={(e) =>
-                      setManualEntry({ ...manualEntry, price: Number(e.target.value) || 0 })
-                    }
-                  />
-                </div>
-              </div>
-              <div className="row" style={{ justifyContent: "flex-end", marginTop: 8 }}>
-                <button className="ghost" onClick={() => setManualEntry(null)}>
-                  Cancel
-                </button>
-                <button className="primary" onClick={commitManualEntry}>
-                  Add to cart
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
       )}
 
       {/* UPI QR modal */}

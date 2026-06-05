@@ -30,15 +30,16 @@ function buildReceiptHtml(r: ReceiptData): string {
   <h2>${r.distributor_name}</h2>
   ${r.distributor_address ? `<div style="text-align:center">${r.distributor_address}</div>` : ""}
   ${r.gstin ? `<div class="small" style="text-align:center">GSTIN: ${r.gstin}</div>` : ""}
+  ${r.gst_rate ? `<div class="small" style="text-align:center">TAX INVOICE${r.hsn_code ? ` &middot; HSN ${r.hsn_code}` : ""}</div>` : ""}
   <hr/>
   <div>Receipt: ${r.receipt_number}</div>
   <div>Local Order No: ${r.local_order_number}</div>
   ${r.server_order_number ? `<div>Server Order No: ${r.server_order_number}</div>` : ""}
   <div>Date: ${r.date_time}</div>
   <div>Cashier: ${r.cashier_name}</div>
-  <div>School: ${r.school_name}</div>
-  ${r.student_name ? `<div>Student: ${r.student_name}</div>` : ""}
-  ${r.parent_mobile ? `<div>Parent: ${r.parent_mobile}</div>` : ""}
+  <div>Outlet: ${r.school_name}</div>
+  ${r.student_name ? `<div>Customer: ${r.student_name}</div>` : ""}
+  ${r.parent_mobile ? `<div>Mobile: ${r.parent_mobile}</div>` : ""}
   <hr/>
   <table>
     <thead><tr><th align="left">Item</th><th>Qty</th><th class="right">Total</th></tr></thead>
@@ -55,8 +56,14 @@ function buildReceiptHtml(r: ReceiptData): string {
   <table>
     <tr><td>Subtotal</td><td class="right">${r.subtotal.toFixed(2)}</td></tr>
     <tr><td>Discount</td><td class="right">${r.discount_total.toFixed(2)}</td></tr>
-    <tr><td>Tax</td><td class="right">${r.tax_total.toFixed(2)}</td></tr>
-    <tr><td><b>Total</b></td><td class="right"><b>${r.grand_total.toFixed(2)}</b></td></tr>
+    ${
+      r.gst_rate
+        ? `<tr><td>Taxable value</td><td class="right">${(r.taxable_value ?? 0).toFixed(2)}</td></tr>
+    <tr><td>CGST (${(r.gst_rate / 2).toFixed(1)}%)</td><td class="right">${(r.cgst ?? 0).toFixed(2)}</td></tr>
+    <tr><td>SGST (${(r.gst_rate / 2).toFixed(1)}%)</td><td class="right">${(r.sgst ?? 0).toFixed(2)}</td></tr>`
+        : `<tr><td>Tax</td><td class="right">${r.tax_total.toFixed(2)}</td></tr>`
+    }
+    <tr><td><b>Total${r.price_includes_tax && r.gst_rate ? " (incl. GST)" : ""}</b></td><td class="right"><b>${r.grand_total.toFixed(2)}</b></td></tr>
   </table>
   <hr/>
   <div>Payment: ${r.payment_mode}${r.payment_reference ? ` (${r.payment_reference})` : ""}</div>

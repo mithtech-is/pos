@@ -72,7 +72,7 @@ export const Button: React.FC<{
   const border = variant === "ghost" && !active ? colors.borderStrong : bg;
   const txt =
     variant === "primary" || active
-      ? "#fff"
+      ? "#171717"
       : variant === "danger"
         ? "#fff"
         : variant === "success"

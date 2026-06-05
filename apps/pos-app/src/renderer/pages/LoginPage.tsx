@@ -115,18 +115,18 @@ export default function LoginPage() {
     <div className="login-shell">
       <div className="login-hero">
         <span className="badge info">
-          <span className="dot" /> Offline-first dealing terminal
+          <span className="dot" /> Offline-first POS terminal
         </span>
-        <h1>Polemarch</h1>
+        <h1>CounterFlow POS</h1>
         <p>
-          Unlisted shares dealing terminal. Book trades for clients across any
-          private-company scrip — even when the network drops. Every trade
-          queues locally and syncs to compliance once you're back online.
+          Run checkout, payments, receipts, inventory updates, and sync from one
+          standalone terminal, even when the network drops. Every order queues
+          locally and syncs when the backend is reachable again.
         </p>
         <div className="panel" style={{ marginTop: 16 }}>
           <strong style={{ fontSize: 13 }}>Demo credentials</strong>
           <div className="muted" style={{ marginBottom: 10 }}>
-            Click to autofill (dealer = cashier role, compliance = manager role).
+            Click to autofill.
           </div>
           <div className="col" style={{ gap: 8 }}>
             {DEMO_CREDS.map((c) => (
@@ -141,24 +141,24 @@ export default function LoginPage() {
                   <div style={{ color: "var(--muted)" }}>{c.password}</div>
                 </div>
                 <span className="role">
-                  {c.role === "manager" ? "Compliance" : "Dealer"}
+                  {c.role === "manager" ? "Manager" : "Cashier"}
                 </span>
               </div>
             ))}
           </div>
           <div className="muted" style={{ marginTop: 10, fontSize: 11 }}>
-            Compliance PIN for price-deviation / reversal approvals:{" "}
+            Manager PIN for discount / return approvals:{" "}
             <span className="kbd">9999</span>
           </div>
         </div>
       </div>
 
       <div className="login-card panel elev">
-        <h2 style={{ marginTop: 0 }}>Dealer sign-in</h2>
+        <h2 style={{ marginTop: 0 }}>Terminal sign-in</h2>
         <div className="muted" style={{ marginBottom: 16 }}>
           {mode === "online"
             ? "First login must be online. After that, offline PIN works."
-            : "Pick a dealer who has signed in here before and enter their PIN."}
+            : "Pick a local user who has signed in here before and enter their PIN."}
         </div>
         <div className="row" style={{ marginBottom: 16 }}>
           <button

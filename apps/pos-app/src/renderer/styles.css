@@ -40,8 +40,8 @@
   --warning-fg: #7a6810;
   --danger-bg: #ffdfdf;
   --danger-fg: #c01f1f;
-  --active-bg: #b8ccff;
-  --active-fg: #3253b5;
+  --active-bg: #e5e5e5;
+  --active-fg: #282828;
   --neutral-bg: #f1f1f1;
   --neutral-fg: #525252;
 
@@ -97,8 +97,8 @@
   --warning-fg: #fcd34d;
   --danger-bg: #3a1a1a;
   --danger-fg: #fca5a5;
-  --active-bg: #1a2240;
-  --active-fg: #a3bffa;
+  --active-bg: #303030;
+  --active-fg: #f5f5f5;
   --neutral-bg: #262626;
   --neutral-fg: #d4d4d4;
 

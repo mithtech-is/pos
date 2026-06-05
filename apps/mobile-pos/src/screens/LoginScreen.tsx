@@ -16,6 +16,7 @@ import { useAuthStore } from "../state/auth";
 import { selectOne } from "../db";
 import { settings, users } from "../db/repositories";
 import { tick } from "../sync";
+import { DEFAULT_BACKEND_URL } from "../config";
 
 /**
  * Light-theme login screen. Two modes:
@@ -51,7 +52,7 @@ export default function LoginScreen() {
     (async () => {
       const savedUrl = await settings.get<string>("backend_url");
       const savedCode = await settings.get<string>("device_code");
-      setBackendUrl(savedUrl ?? "http://localhost:9000");
+      setBackendUrl(savedUrl ?? DEFAULT_BACKEND_URL);
       setDeviceCode(savedCode ?? "POS001");
       const list = await users.list();
       setUsersList(list);
@@ -162,11 +163,11 @@ export default function LoginScreen() {
           ⚡ Offline-first POS
         </StatusPill>
         <Text variant="display" style={{ marginTop: 12, marginBottom: 6 }}>
-          School Uniform POS
+          CounterFlow POS
         </Text>
         <Text variant="body" tone="soft">
-          Sell uniforms across multiple schools — even when the network drops.
-          Orders queue locally and sync automatically when you're back online.
+          Run checkout, payments, and sync even when the network drops. Orders
+          queue locally and sync automatically when you're back online.
         </Text>
       </View>
 

@@ -24,7 +24,7 @@ export default function PendingOrdersPage() {
   return (
     <div className="panel" style={{ margin: 12 }}>
       <div className="row" style={{ justifyContent: "space-between" }}>
-        <h2 style={{ margin: 0 }}>Pending orders</h2>
+        <h2 style={{ margin: 0 }}>Pending sync</h2>
         <button className="primary" onClick={retry}>Sync now</button>
       </div>
       {orders.length === 0 ? (
@@ -34,7 +34,7 @@ export default function PendingOrdersPage() {
           <thead>
             <tr>
               <th>Local #</th>
-              <th>School</th>
+              <th>Outlet</th>
               <th>Total</th>
               <th>Status</th>
               <th>Created</th>

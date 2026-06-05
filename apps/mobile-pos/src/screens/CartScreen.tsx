@@ -51,8 +51,8 @@ type PaymentMode = "cash" | "upi" | "credit";
  * Cart tab — the heart of the POS.
  *
  * Layout (top to bottom, like the Agilo screenshots):
- *   1. Context strip: school + class + gender + uniform (tap to change)
- *   2. Customer chip: student + parent mobile (tap to add/edit)
+ *   1. Context strip: outlet + group + type (tap to change)
+ *   2. Customer chip: customer name + mobile (tap to add/edit)
  *   3. Cart lines (swipe right to delete; built-in quantity picker)
  *   4. Add Promotion button → discount Dialog
  *   5. Totals block (Subtotal / Discount / Tax / Total)
@@ -215,7 +215,7 @@ export default function CartScreen() {
   async function onPressCheckout() {
     if (!user) return;
     if (cart.lines.length === 0) return showToast("error", "Cart is empty");
-    if (!cart.school_id) return showToast("error", "Pick a school first");
+    if (!cart.school_id) return showToast("error", "Pick an outlet first");
     if (
       effectiveDiscountPct > DISCOUNT_PIN_THRESHOLD_PCT &&
       !discountApprovedBy &&
@@ -343,7 +343,7 @@ export default function CartScreen() {
         schools.find((s) => s.id === cart.school_id)?.name ?? "—";
       const receipt: ReceiptData = {
         distributor_name:
-          (await settings.get<string>("distributor_name")) ?? "Trail Blaze Retail",
+          (await settings.get<string>("distributor_name")) ?? "CounterFlow Store",
         distributor_address:
           (await settings.get<string>("distributor_address")) ?? undefined,
         gstin: (await settings.get<string>("distributor_gstin")) ?? undefined,
@@ -455,7 +455,7 @@ export default function CartScreen() {
           <RNText style={{ color: t.colors.muted, fontSize: 16 }}>›</RNText>
         </TouchableOpacity>
 
-        {/* ── Context chip (school / class) ── */}
+        {/* Context chip */}
         <TouchableOpacity
           onPress={() => setContextOpen(true)}
           activeOpacity={0.7}
@@ -475,10 +475,10 @@ export default function CartScreen() {
             <RNText style={{ fontSize: 18 }}>🏫</RNText>
             <View style={{ flex: 1 }}>
               <Text variant="body" numberOfLines={1}>
-                {schoolName ?? "Select school"}
+                {schoolName ?? "Select outlet"}
               </Text>
               <Text variant="caption" tone="muted">
-                {className ? `Class ${className} · ` : ""}
+                {className ? `Group ${className} · ` : ""}
                 {pretty(cart.gender)} · {prettyUniform(cart.uniform_type)}
               </Text>
             </View>
@@ -840,18 +840,18 @@ function ContextSheet({
   const cart = useCartStore();
 
   const GENDERS: { id: "boy" | "girl" | "unisex"; label: string }[] = [
-    { id: "boy", label: "Boy" },
-    { id: "girl", label: "Girl" },
-    { id: "unisex", label: "Unisex" },
+    { id: "boy", label: "Standard" },
+    { id: "girl", label: "Alternate" },
+    { id: "unisex", label: "Universal" },
   ];
   const UNIFORM_TYPES = ["regular", "summer", "winter", "sports", "house"];
 
   return (
-    <BottomSheet visible={visible} title="School & context" onClose={onClose} heightFraction={0.85}>
+    <BottomSheet visible={visible} title="Outlet & context" onClose={onClose} heightFraction={0.85}>
       <ScrollView style={{ paddingHorizontal: 20 }} contentContainerStyle={{ paddingBottom: 32, gap: 18 }}>
         <View>
           <Text variant="label" tone="muted" style={{ marginBottom: 8 }}>
-            SCHOOL
+            OUTLET
           </Text>
           <View style={{ gap: 6 }}>
             {schools.map((s) => {
@@ -884,7 +884,7 @@ function ContextSheet({
         {classes.length > 0 && (
           <View>
             <Text variant="label" tone="muted" style={{ marginBottom: 8 }}>
-              CLASS
+              GROUP
             </Text>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
               {classes.map((c) => {
@@ -910,7 +910,7 @@ function ContextSheet({
                         fontWeight: "500",
                       }}
                     >
-                      Class {c.class_name}
+                      Group {c.class_name}
                     </RNText>
                   </TouchableOpacity>
                 );
@@ -921,7 +921,7 @@ function ContextSheet({
 
         <View>
           <Text variant="label" tone="muted" style={{ marginBottom: 8 }}>
-            GENDER
+            OPTION
           </Text>
           <View style={{ flexDirection: "row", gap: 8 }}>
             {GENDERS.map((g) => {
@@ -957,7 +957,7 @@ function ContextSheet({
 
         <View>
           <Text variant="label" tone="muted" style={{ marginBottom: 8 }}>
-            UNIFORM TYPE
+            TYPE
           </Text>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
             {UNIFORM_TYPES.map((u) => {
@@ -1022,13 +1022,13 @@ function CustomerSheet({
     <BottomSheet visible={visible} title="Customer" onClose={onClose} heightFraction={0.5}>
       <View style={{ paddingHorizontal: 20, gap: 14 }}>
         <Field
-          label="Student name"
+          label="Customer name"
           value={name}
           onChangeText={setName}
           placeholder="Optional"
         />
         <Field
-          label="Parent mobile"
+          label="Customer mobile"
           value={mobile}
           onChangeText={setMobile}
           placeholder="10-digit"
@@ -1082,7 +1082,7 @@ function PaymentSheet({
   const options: { id: PaymentMode; label: string; emoji: string; sub: string }[] = [
     { id: "cash", label: "Cash", emoji: "💵", sub: "Collect at counter" },
     { id: "upi", label: "UPI", emoji: "📱", sub: "Show BHIM QR" },
-    { id: "credit", label: "Credit / Pay later", emoji: "📒", sub: "Invoice / school account" },
+    { id: "credit", label: "Credit / Pay later", emoji: "📒", sub: "Invoice / account" },
   ];
   return (
     <BottomSheet visible={visible} title="Payment method" onClose={onClose} heightFraction={0.5}>
@@ -1180,11 +1180,11 @@ function pretty(mode: string | null | undefined): string {
   if (!mode) return "";
   switch (mode) {
     case "boy":
-      return "Boy";
+      return "Standard";
     case "girl":
-      return "Girl";
+      return "Alternate";
     case "unisex":
-      return "Unisex";
+      return "Universal";
     default:
       return mode;
   }

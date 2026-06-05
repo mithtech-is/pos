@@ -133,7 +133,7 @@ export default function ScanScreen() {
             Camera permission needed
           </Text>
           <Text variant="body" tone="soft" align="center">
-            Grant camera access to scan uniform barcodes.
+            Grant camera access to scan product barcodes.
           </Text>
           <View style={{ height: 8 }} />
           <Button variant="primary" size="lg" onPress={requestPermission} full>

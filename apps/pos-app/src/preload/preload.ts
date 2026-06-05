@@ -19,6 +19,53 @@ const api = {
     ipcRenderer.invoke("db:listVariantsForProduct", productId),
   findByBarcode: (barcode: string) =>
     ipcRenderer.invoke("db:findByBarcode", barcode),
+  // Scan-to-add: create a catalog product from a scanned barcode (online only).
+  createProductByScan: (payload: {
+    barcode: string;
+    name: string;
+    price: number;
+    category?: string;
+  }) => ipcRenderer.invoke("pos:createProduct", payload),
+  // Loyalty / CRM (online-only, best-effort)
+  lookupCustomer: (phone: string) => ipcRenderer.invoke("pos:lookupCustomer", phone),
+  awardPoints: (payload: {
+    phone: string;
+    name?: string;
+    spent: number;
+    redeem_points?: number;
+    earn_rupees_per_point?: number;
+  }) => ipcRenderer.invoke("pos:awardPoints", payload),
+  // Promotions
+  listPromotions: () => ipcRenderer.invoke("pos:listPromotions"),
+  savePromotion: (promo: {
+    code: string;
+    type: "percent" | "flat" | "bogo";
+    value: number;
+    min_subtotal?: number | null;
+    starts_at?: string | null;
+    ends_at?: string | null;
+    active?: boolean;
+  }) => ipcRenderer.invoke("pos:savePromotion", promo),
+  deletePromotion: (id: string) => ipcRenderer.invoke("pos:deletePromotion", id),
+  // Inventory / suppliers / purchase orders (back-office, online)
+  listInventory: () => ipcRenderer.invoke("pos:listInventory"),
+  updateInventory: (body: {
+    sku: string;
+    reorder_point?: number;
+    set_stock?: number;
+    add_stock?: number;
+  }) => ipcRenderer.invoke("pos:updateInventory", body),
+  listSuppliers: () => ipcRenderer.invoke("pos:listSuppliers"),
+  saveSupplier: (body: { name: string; phone?: string; email?: string }) =>
+    ipcRenderer.invoke("pos:saveSupplier", body),
+  deleteSupplier: (id: string) => ipcRenderer.invoke("pos:deleteSupplier", id),
+  listPurchaseOrders: () => ipcRenderer.invoke("pos:listPurchaseOrders"),
+  savePurchaseOrder: (body: {
+    supplier_id?: string | null;
+    supplier_name?: string | null;
+    lines: Array<{ sku: string; qty: number; cost?: number }>;
+  }) => ipcRenderer.invoke("pos:savePurchaseOrder", body),
+  receivePurchaseOrder: (id: string) => ipcRenderer.invoke("pos:receivePurchaseOrder", id),
   findKitByContext: (payload: {
     school_id: string;
     class_id: string;
@@ -81,6 +128,7 @@ const api = {
   renderReceipt: (receipt: any) =>
     ipcRenderer.invoke("printer:render", receipt),
   lastReceipt: () => ipcRenderer.invoke("printer:last"),
+
 };
 
 try {

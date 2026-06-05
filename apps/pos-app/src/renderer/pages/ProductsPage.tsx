@@ -2,18 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCartStore } from "../state/cart";
 
-/**
- * Listings page — Polemarch's catalog of unlisted-share scrips.
- *
- * Each tile = one scrip (issuer + ISIN). Click → opens a detail modal with
- * lot-size + side (Buy/Sell) + qty pickers. From there it drops into the
- * Trade Ticket (cart) just like the mobile flow.
- *
- * Data comes from the existing local_products / local_variants tables in
- * SQLite, populated by the sync worker. The UI labels are repurposed for
- * the unlisted-shares domain — the schema names underneath are unchanged so
- * the sync protocol keeps working.
- */
+/** Catalog page backed by the local offline product cache. */
 
 interface ProductRow {
   id: string;
@@ -90,11 +79,10 @@ export default function ProductsPage() {
   return (
     <div className="products-page">
       <div style={{ marginBottom: 14 }}>
-        <h2 style={{ fontSize: 32, marginBottom: 4 }}>Listings</h2>
+        <h2 style={{ fontSize: 32, marginBottom: 4 }}>Catalog</h2>
         <div className="muted">
-          Unlisted-share scrips on Polemarch's book · click a listing to
-          confirm lot details and add to the trade ticket · works offline
-          from the local sync cache.
+          Browse synced products, confirm options, and add items to checkout.
+          The catalog stays available from the local cache when offline.
         </div>
       </div>
 
@@ -102,14 +90,14 @@ export default function ProductsPage() {
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search by issuer name, ISIN, or scrip code…"
+          placeholder="Search by product name, SKU, or barcode..."
         />
         <span className="muted">
-          {loading ? "Loading…" : `${items.length} ${items.length === 1 ? "listing" : "listings"}`}
+          {loading ? "Loading..." : `${items.length} ${items.length === 1 ? "item" : "items"}`}
         </span>
         <span className="spacer" />
         <button className="outline" onClick={() => navigate("/pos")}>
-          Open Trade Ticket →
+          Open Checkout
         </button>
       </div>
 
@@ -131,7 +119,7 @@ export default function ProductsPage() {
           <div style={{ fontSize: 48, marginBottom: 10, opacity: 0.5 }}>📭</div>
           {query
             ? `No listings match "${query}"`
-            : "No listings in the catalog yet. Pull sync to fetch the latest scrip book."}
+            : "No items in the catalog yet. Pull sync to fetch the latest products."}
         </div>
       ) : (
         <div className="products-grid">
@@ -150,8 +138,7 @@ export default function ProductsPage() {
               </div>
               <div className="name">{p.name}</div>
               <div className="sub">
-                {p.variant_count} {p.variant_count === 1 ? "lot" : "lots"}
-                {p.school_code ? ` · ${p.school_code}` : ""}
+                {p.variant_count} {p.variant_count === 1 ? "option" : "options"}
               </div>
               <div className="price">{priceLabel(p)}</div>
             </div>
@@ -258,7 +245,7 @@ function ProductDetailModal({
   }
 
   if (!productId) return null;
-  const productName = variants[0]?.product_name ?? "Loading…";
+  const productName = variants[0]?.product_name ?? "Loading...";
 
   return (
     <div
@@ -294,19 +281,19 @@ function ProductDetailModal({
         </div>
 
         {loading ? (
-          <div className="muted">Loading variants…</div>
+          <div className="muted">Loading options...</div>
         ) : (
           <>
             <div style={{ marginBottom: 16 }}>
-              <div className="muted">Quoted price per share</div>
+              <div className="muted">Unit price</div>
               <div style={{ fontSize: 26, fontWeight: 700, marginTop: 2 }}>
-                {selected ? inr(selected.price) : "Pick a lot"}
+                {selected ? inr(selected.price) : "Pick an option"}
               </div>
             </div>
 
             {sizes.length > 0 && (
               <div style={{ marginBottom: 16 }}>
-                <label>Lot</label>
+                <label>Option</label>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                   {sizes.map((s) => (
                     <div
@@ -323,7 +310,7 @@ function ProductDetailModal({
 
             {colors.length > 0 && (
               <div style={{ marginBottom: 16 }}>
-                <label>Class / Series</label>
+                <label>Variant group</label>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                   {colors.map((c) => (
                     <div
@@ -339,7 +326,7 @@ function ProductDetailModal({
             )}
 
             <div style={{ marginBottom: 16 }}>
-              <label>Number of shares</label>
+              <label>Quantity</label>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <button
                   className="outline"
@@ -374,8 +361,8 @@ function ProductDetailModal({
               onClick={() => selected && onAdd(selected, qty)}
             >
               {selected
-                ? `Add to trade ticket · ${inr(selected.price * qty)}`
-                : "Pick a lot"}
+                ? `Add to checkout · ${inr(selected.price * qty)}`
+                : "Pick an option"}
             </button>
           </>
         )}

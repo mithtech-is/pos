@@ -35,13 +35,13 @@ const MODE_ICON: Record<string, string> = {
 };
 
 /**
- * Live transactions dashboard — totals broken down by payment mode, school
+ * Live transactions dashboard — totals broken down by payment mode, outlet
  * and cashier. Same data shape as the Electron version. Bank-side
  * reconciliation requires a payment gateway (out of MVP).
  */
 export default function TransactionsScreen() {
   const [orders, setOrders] = useState<any[]>([]);
-  const [schoolMap, setSchoolMap] = useState<Record<string, string>>({});
+  const [outletMap, setOutletMap] = useState<Record<string, string>>({});
   const [range, setRange] = useState<Range>("today");
   const [updatedAt, setUpdatedAt] = useState(new Date());
 
@@ -51,7 +51,7 @@ export default function TransactionsScreen() {
     const schools = await masterData.listSchools();
     const map: Record<string, string> = {};
     for (const s of schools) map[s.id] = `${s.code} · ${s.name}`;
-    setSchoolMap(map);
+    setOutletMap(map);
     setUpdatedAt(new Date());
   }
 
@@ -179,7 +179,7 @@ export default function TransactionsScreen() {
       </Panel>
 
       <Panel style={{ marginBottom: 12 }}>
-        <Title style={{ fontSize: 16 }}>🏫 By school</Title>
+        <Title style={{ fontSize: 16 }}>By outlet</Title>
         <View style={{ marginTop: 8 }}>
           {bySchool.length === 0 && <Muted>—</Muted>}
           {bySchool.map((s) => (
@@ -187,7 +187,7 @@ export default function TransactionsScreen() {
               key={s.school_id}
               style={{ justifyContent: "space-between", paddingVertical: 6 }}
             >
-              <Text style={{ color: colors.text }}>{schoolMap[s.school_id] ?? "—"}</Text>
+              <Text style={{ color: colors.text }}>{outletMap[s.school_id] ?? "—"}</Text>
               <Text style={{ color: colors.text, fontVariant: ["tabular-nums"] }}>
                 {inr(s.gross)}{" "}
                 <Text style={{ color: colors.muted, fontSize: 11 }}>· {s.count}</Text>

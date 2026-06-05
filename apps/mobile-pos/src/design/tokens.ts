@@ -1,9 +1,8 @@
 /**
  * Design tokens for the new light/dark theme system.
  *
- * Palette is lifted from the Agilo Medusa POS starter so the UI matches the
- * reference screenshots. Both `light` and `dark` palettes expose the same
- * keys so components can read from a single resolved theme without branching.
+ * Both `light` and `dark` palettes expose the same keys so components can
+ * read from a single resolved theme without branching.
  *
  * The dark palette is a hand-tuned inversion that keeps the same emotional
  * intent (success stays green, warning stays amber, etc.) while lifting
@@ -74,8 +73,8 @@ export const lightPalette: Palette = {
   warningFg: "#7A6810",
   errorBg: "#FFDFDF",
   errorFg: "#C01F1F",
-  activeBg: "#B8CCFF",
-  activeFg: "#3253B5",
+  activeBg: "#E5E5E5",
+  activeFg: "#282828",
   neutralBg: "#F1F1F1",
   neutralFg: "#525252",
 };
@@ -107,8 +106,8 @@ export const darkPalette: Palette = {
   warningFg: "#FCD34D",
   errorBg: "#3A1A1A",
   errorFg: "#FCA5A5",
-  activeBg: "#1A2240",
-  activeFg: "#A3BFFA",
+  activeBg: "#303030",
+  activeFg: "#F5F5F5",
   neutralBg: "#262626",
   neutralFg: "#D4D4D4",
 };

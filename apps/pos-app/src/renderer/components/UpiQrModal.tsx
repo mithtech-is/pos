@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+﻿import { useEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
 
 interface Props {
@@ -8,7 +8,7 @@ interface Props {
   /** Merchant info pulled from local settings (configured in Settings screen). */
   vpa: string;
   payeeName: string;
-  /** Called once cashier captures UTR + confirms parent paid. */
+  /** Called once cashier captures UTR + confirms the customer paid. */
   onPaid: (utr: string) => void;
   onCancel: () => void;
 }
@@ -16,10 +16,10 @@ interface Props {
 /**
  * UPI QR modal — replaces the old "type a UPI reference manually" flow.
  *
- * Generates a BHIM UPI deep-link QR (`upi://pay?pa=…&pn=…&am=…&tr=…`). Parent
+ * Generates a BHIM UPI deep-link QR (`upi://pay?pa=…&pn=…&am=…&tr=…`). Customer
  * scans with any UPI app (GPay, PhonePe, Paytm, BHIM, etc.); their app
- * pre-fills payee + amount + note. Parent taps Pay; cashier reads the UTR /
- * transaction id from the parent's success screen and types it here.
+ * pre-fills payee + amount + note. The customer taps Pay; cashier reads the UTR /
+ * transaction id from the customer's success screen and types it here.
  *
  * No payment gateway is involved — this is the "small shop" UPI flow used
  * across India. For automated verification, swap the cashier-eyeball step
@@ -43,7 +43,7 @@ export default function UpiQrModal({
     payeeName,
     amount,
     reference,
-    note: `Uniform order ${reference}`,
+    note: `Order ${reference}`,
   });
 
   useEffect(() => {
@@ -56,7 +56,7 @@ export default function UpiQrModal({
     QRCode.toDataURL(deepLink, {
       width: 320,
       margin: 1,
-      color: { dark: "#0b1120", light: "#ffffff" },
+      color: { dark: "#000000", light: "#ffffff" },
     })
       .then(setQrDataUrl)
       .catch((e) => setError(`Failed to render QR: ${e.message}`));
@@ -64,7 +64,7 @@ export default function UpiQrModal({
 
   function submit() {
     if (!utr.trim()) {
-      setError("Enter the UTR / transaction id from the parent's success screen");
+      setError("Enter the UTR / transaction id from the customer's success screen");
       return;
     }
     onPaid(utr.trim());
@@ -89,7 +89,7 @@ export default function UpiQrModal({
       >
         <h3 style={{ marginTop: 0 }}>📱 UPI payment — ₹{amount.toFixed(2)}</h3>
         <div className="muted" style={{ marginBottom: 14 }}>
-          Show this QR to the parent. They scan with any UPI app
+          Show this QR to the customer. They scan with any UPI app
           (GPay / PhonePe / Paytm / BHIM), tap pay, then tell you the UTR.
         </div>
 
@@ -116,7 +116,7 @@ export default function UpiQrModal({
           {deepLink}
         </div>
 
-        <label>UTR / Transaction id (from parent's screen)</label>
+        <label>UTR / Transaction id (from customer's screen)</label>
         <input
           autoFocus
           placeholder="e.g. 401234567890"
@@ -152,7 +152,7 @@ export default function UpiQrModal({
             <button
               className="ghost"
               onClick={() => onPaid("MANUAL-NO-UTR")}
-              title="Use only when parent paid but didn't share UTR"
+              title="Use only when customer paid but did not share UTR"
             >
               Skip UTR
             </button>
@@ -175,7 +175,7 @@ export default function UpiQrModal({
  * - `pn` (payee name — required)
  * - `am` (amount — optional, fixed for dynamic QR)
  * - `cu` (currency — defaults to INR)
- * - `tn` (transaction note — appears on the parent's UPI app)
+ * - `tn` (transaction note — appears on the customer's UPI app)
  * - `tr` (merchant txn reference — echoed back on the success screen so the
  *        cashier can match the UTR to this bill)
  */
@@ -196,3 +196,5 @@ export function buildUpiDeepLink(args: {
   });
   return `upi://pay?${params.toString()}`;
 }
+
+
